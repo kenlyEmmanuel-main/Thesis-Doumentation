@@ -1,0 +1,16 @@
+\chapter{Methodology}
+\label{ch:methodology}
+
+\section{System Architecture}
+The proposed system architecture is designed around modular components that isolate concern boundaries. Each module communicates through standardized interfaces.
+
+\section{Mathematical Formulation}
+The core objective function minimizes empirical risk across all training samples:
+\begin{equation}
+\label{eq:loss_fn}
+\mathcal{L}(\theta) = \frac{1}{N} \sum_{i=1}^{N} \ell(f(x_i; \theta), y_i) + \lambda \|\theta\|_2^2
+\end{equation}
+where $\theta$ denotes the model parameters, $N$ represents the sample cardinality, and $\lambda$ acts as the regularization coefficient.
+
+\section{Implementation Pipeline}
+Data ingestion, preprocessing, training, and evaluation follow a reproducible pipeline executed across deterministic runtime targets.

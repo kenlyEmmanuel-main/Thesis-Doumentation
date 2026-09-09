@@ -1,0 +1,58 @@
+\documentclass[12pt, a4paper]{report}
+
+% ==============================================================================
+% Preamble: Packages & Global Styling
+% ==============================================================================
+\usepackage[margin=1in]{geometry}         % Standard 1-inch margins
+\usepackage{setspace}                      % Line spacing package
+\onehalfspacing                            % 1.5 line spacing (standard thesis format)
+\usepackage{graphicx}                      % Include graphics/figures
+\usepackage{amsmath, amssymb}              % Mathematical equations and symbols
+\usepackage{booktabs}                      % Professional tables
+\usepackage{hyperref}                      % Clickable links and references
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    citecolor=blue
+}
+
+% ==============================================================================
+% Document Metadata
+% ==============================================================================
+\title{\textbf{Design and Implementation of Capstone / Thesis Research Project}}
+\author{
+    Author One \and Author Two \and Author Three \\
+    \small Department of Computer Engineering / Science \\
+    \small University Name
+}
+\date{\today}
+
+% ==============================================================================
+% Main Document Body
+% ==============================================================================
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This thesis presents the design, methodology, and evaluation of our proposed system. The research addresses key challenges in the domain and establishes an empirical evaluation framework. All chapters are structured modularly to maintain uniform document formatting.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% Modular Chapter Inclusions
+\include{chapters/ch1_intro}
+\include{chapters/ch2_lit_review}
+\include{chapters/ch3_methodology}
+\include{chapters/ch4_results}
+\include{chapters/ch5_conclusion}
+
+% Bibliography / References
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}
