@@ -1,58 +1,162 @@
 \documentclass[12pt, a4paper]{report}
 
 % ==============================================================================
-% Preamble: Packages & Global Styling
+% Geometry & Margin Settings (ADNU ECE/CpE Section A & C)
+% Top: 1.0", Bottom: 1.0", Right: 1.0", Left: 1.25"
+% Pagination: 0.5" from top/bottom
 % ==============================================================================
-\usepackage[margin=1in]{geometry}         % Standard 1-inch margins
-\usepackage{setspace}                      % Line spacing package
-\onehalfspacing                            % 1.5 line spacing (standard thesis format)
-\usepackage{graphicx}                      % Include graphics/figures
-\usepackage{amsmath, amssymb}              % Mathematical equations and symbols
-\usepackage{booktabs}                      % Professional tables
-\usepackage{hyperref}                       % Clickable links and references
+\usepackage[
+    top=1.0in,
+    bottom=1.0in,
+    right=1.0in,
+    left=1.25in,
+    headheight=14.5pt,
+    headsep=0.5in,
+    footskip=0.5in
+]{geometry}
 
+% ==============================================================================
+% Typography & Font Styling (ADNU ECE/CpE Section B)
+% Times New Roman (TNR) 12pt throughout
+% ==============================================================================
+\usepackage{newtxtext, newtxmath}
+
+% ==============================================================================
+% Line Spacing & Paragraph Formatting (ADNU ECE/CpE Section F)
+% Body double spaced, 0pt before/after, 1.50cm first line indent
+% ==============================================================================
+\usepackage{setspace}
+\doublespacing
+\setlength{\parindent}{1.50cm}
+\setlength{\parskip}{0pt}
+
+% ==============================================================================
+% Header & Footer Pagination (ADNU ECE/CpE Section C)
+% Titles of major sections: page number bottom center, 0.5" from bottom
+% Pages with no major section titles: page number upper right corner, 0.5" from top
+% ==============================================================================
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Redefine plain style used automatically by \chapter
+\fancypagestyle{plain}{
+    \fancyhf{}
+    \fancyfoot[C]{\thepage}
+    \renewcommand{\headrulewidth}{0pt}
+    \renewcommand{\footrulewidth}{0pt}
+}
+
+% ==============================================================================
+% Heading Formats & Hierarchy (ADNU ECE/CpE Section F)
+% Chapter: "Chapter X" (bold, title case) \\ "TITLE" (bold, all caps, centered)
+% ==============================================================================
+\usepackage{titlesec}
+
+\titleformat{\chapter}[display]
+    {\normalfont\fontsize{14pt}{17pt}\bfseries\centering}
+    {Chapter \thechapter}
+    {1\baselineskip}
+    {\MakeUppercase}
+\titlespacing*{\chapter}{0pt}{0pt}{1\baselineskip}
+
+\titleformat{\section}
+    {\normalfont\fontsize{12pt}{15pt}\bfseries}
+    {\thesection}
+    {1em}
+    {}
+\titlespacing*{\section}{0pt}{30pt plus 4pt minus 2pt}{0pt}
+
+\titleformat{\subsection}
+    {\normalfont\fontsize{12pt}{15pt}\bfseries}
+    {\thesubsection}
+    {1em}
+    {}
+\titlespacing*{\subsection}{0pt}{30pt plus 4pt minus 2pt}{0pt}
+
+\titleformat{\subsubsection}
+    {\normalfont\fontsize{12pt}{15pt}\bfseries}
+    {\thesubsubsection}
+    {1em}
+    {}
+\titlespacing*{\subsubsection}{0pt}{30pt plus 4pt minus 2pt}{0pt}
+
+\setcounter{secnumdepth}{4}
+\setcounter{tocdepth}{3}
+
+% ==============================================================================
+% Tables, Figures, & Captions (ADNU ECE/CpE Section G)
+% ==============================================================================
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+
+\captionsetup[table]{
+    labelsep=period,
+    labelfont=bf,
+    textfont=normalfont,
+    position=top,
+    skip=6pt
+}
+
+\captionsetup[figure]{
+    labelsep=period,
+    labelfont=bf,
+    textfont=normalfont,
+    position=bottom,
+    skip=6pt
+}
+
+% Equation numbering in Times New Roman bold: (Chapter.Equation)
+\usepackage{amsmath}
+\renewcommand{\theequation}{\textbf{(\thechapter.\arabic{equation})}}
+
+% ==============================================================================
+% Bibliography & In-Text Citations (ADNU ECE/CpE Section F & References)
+% APA Citation Style via natbib + apalike
+% ==============================================================================
+\usepackage[round]{natbib}
+
+% Hyperlink styling
+\usepackage{hyperref}
 \hypersetup{
     colorlinks=true,
-    linkcolor=blue,
-    filecolor=magenta,      
-    urlcolor=cyan,
-    citecolor=blue
+    linkcolor=black,
+    filecolor=black,
+    urlcolor=blue,
+    citecolor=black
 }
 
 % ==============================================================================
-% Document Metadata
-% ==============================================================================
-\title{\textbf{Design and Implementation of Capstone / Thesis Research Project}}
-\author{
-    Theo \and Lea \and Kenly \\
-    \small Research and Development Department \\
-    \small Reblel nbdgdfsg
-}
-\date{\today}
-
-% ==============================================================================
-% Main Document Body
+% Document Structure
 % ==============================================================================
 \begin{document}
 
-\maketitle
-
-\begin{abstract}
-This thesis presents the design, methodology, and evaluation of our proposed system. The research addresses key challenges in the domain and establishes an empirical evaluation framework. All chapters are structured modularly to maintain uniform document formatting.
-\end{abstract}
+% Front Matter
+\pagenumbering{roman}
+\input{frontmatter/titlepage}
+\input{frontmatter/abstract}
 
 \tableofcontents
 \newpage
 
-% Modular Chapter Inclusions
+% Main Chapters
+\pagenumbering{arabic}
 \include{chapters/ch1_intro}
 \include{chapters/ch2_lit_review}
 \include{chapters/ch3_methodology}
-\include{chapters/ch4_results}
-\include{chapters/ch5_conclusion}
+\include{chapters/ch4_conclusion}
+\include{chapters/ch5_recommendation}
 
-% Bibliography / References
-\bibliographystyle{IEEEtran}
+% References (APA Style)
+\bibliographystyle{apalike}
 \bibliography{references}
+
+% Appendices
+\appendix
+\include{appendices/appendix_a}
 
 \end{document}

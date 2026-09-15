@@ -17,6 +17,7 @@
 *.vrb
 
 # OS and Editor generated files
-.vscode/
+.vscode/*
+!.vscode/settings.json
 Thumbs.db
 .DS_Store
