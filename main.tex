@@ -115,10 +115,12 @@
 \renewcommand{\theequation}{\textbf{(\thechapter.\arabic{equation})}}
 
 % ==============================================================================
-% Bibliography & In-Text Citations (ADNU ECE/CpE Section F & References)
-% APA Citation Style via natbib + apalike
+% Bibliography & In-Text Citations (ADNU ECE/CpE Department)
+% IEEE Citation Style via cite + IEEEtran
 % ==============================================================================
-\usepackage[round]{natbib}
+\usepackage{cite}
+\providecommand{\citep}[1]{\cite{#1}}
+\providecommand{\citet}[1]{\cite{#1}}
 
 % Hyperlink styling
 \usepackage{hyperref}
@@ -151,8 +153,8 @@
 \include{chapters/ch4_conclusion}
 \include{chapters/ch5_recommendation}
 
-% References (APA Style)
-\bibliographystyle{apalike}
+% References (IEEE Style)
+\bibliographystyle{IEEEtran}
 \bibliography{references}
 
 % Appendices
