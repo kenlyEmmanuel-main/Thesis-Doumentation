@@ -2,39 +2,117 @@
 \label{ch:introduction}
 
 \section{Background of the Study}
-In recent years, the rapid advancement of computational engineering and distributed computing has prompted significant demand for modular, robust architectures.
-Contemporary software and hardware workflows increasingly rely on complex multi-stage pipelines that must coordinate data ingestion, mathematical processing, and real-time inference.
-However, conventional monoliths often obscure boundaries between functional modules, resulting in fragile codebases that hinder collaborative development and increase maintenance overhead.
-Establishing structured architectural frameworks that isolate distinct analytical layers is therefore essential for sustainable research and industrial deployment.
-This study investigates systematic design patterns that enhance operational determinism and maintainability across multidisciplinary engineering systems.
+Public bidding is the principal process through which Philippine government agencies procure goods, infrastructure projects, and consulting services.
+Through competitive bidding, it aims to secure value for public funds while enforcing transparency and accountability in the disbursement of public resources.
+By standardizing procurement protocols and requiring documentary proof of eligibility, the process establishes a merit-based structure through which private enterprises gain access to government contracts.
+
+For more than two decades, this structure was governed by Republic Act No. 9184, the Government Procurement Reform Act, which established competitive bidding as the default procurement mechanism.
+RA 9184 created the Bids and Awards Committee (BAC) to oversee the evaluation lifecycle, covering bid receipt, preliminary opening, examination, and post-qualification.
+Under this framework, suppliers, contractors, and consultants were required to satisfy both substantive and documentary requirements before they could compete for government contracts~\cite{ra9184}.
+
+The governing law has since changed.
+Republic Act No. 12009, the New Government Procurement Act (NGPA), was signed on July 20, 2024 and took effect on August 13, 2024, repealing RA 9184 in its entirety.
+Its Implementing Rules and Regulations were approved through GPPB Resolution No. 02-2025 and updated as of March 30, 2026, with a three-year transition period during which procurements already initiated under RA 9184 continue under the prior rules until completion.
+The NGPA designates the Philippine Government Electronic Procurement System (PhilGEPS) as the single electronic portal and primary channel for government procurement, provides for electronic procurement functions including electronic bidding, and requires electronic signatures used in these activities to comply with the Electronic Commerce Act~\cite{ra12009}.
+The law therefore establishes a digitally integrated procurement environment while retaining the documentary compliance requirements borne by the bidder.
+
+Prospective bidders must assemble extensive documents spanning legal, technical, financial, and eligibility requirements in accordance with the Philippine Bidding Documents, including commercial permits, corporate registrations, tax clearances, notarized affidavits, and technical proposals.
+For micro, small, and medium enterprises (MSMEs) with limited administrative capacity, this requirement constitutes a significant barrier to participation.
+Larger firms are not exempt; they absorb the same requirement by assigning dedicated administrative personnel to prepare and verify submissions, which increases overhead and diverts operational resources.
+
+Further, there is no nationally accumulated statistic on documentary disqualification rates publicly available; this absence is itself indicative of a gap in procurement performance monitoring.
+Agency-level audits nonetheless demonstrate the scale of the problem.
+In its Calendar Year 2020 audit of the National Irrigation Administration, the Commission on Audit found that 699 of 841 awarded contracts, worth an aggregate ₱6.578 billion, had incomplete documentary or eligibility requirements~\cite{nia2021coa}.
+Its 2019 audit of the Philippine National Railways similarly found that a ₱921-million contract for the procurement of train sets proceeded despite the winning contractor's failure to submit post-qualification requirements that should have resulted in disqualification under Section 34.2 of the Revised IRR of RA 9184~\cite{panti2020coa}.
+These findings are corroborated by qualitative evidence: a study by the Philippine Institute for Development Studies reports government informants describing bidders disqualified over defects characterized as ``very minor,'' including unsealed bid envelopes and unsigned documents, with such disqualifications occurring even on large-scale projects~\cite{navarro2017procurement}.
+While these cases involve deficiencies discovered after award rather than at preliminary disqualification, they indicate that the reliability of manual documentary verification is a systemic weakness at every stage of the procurement lifecycle, not only the pass/fail gate.
+
+Compounding this is the rigidity of the preliminary examination itself.
+Bid submissions are assessed against a non-discretionary ``pass/fail'' standard under which the BAC exercises no clerical discretion, pursuant to RA 12009~\cite{ra12009}.
+Under this statutory threshold, a single omitted annex, an outdated sworn statement template, an expired permit, or an un-initialed page is sufficient to disqualify an otherwise competitive bid.
+The consequence is disproportionate to the error: a clerical defect of no substantive bearing on the bidder's capacity or price can eliminate a submission representing months of preparation.
+
+Conventional document processing software offers limited protection against this class of error.
+Commercial PDF utilities can merge, split, paginate, and stamp files, but they operate on raw byte streams and visual layers.
+They possess no semantic comprehension of document content, and therefore cannot determine whether a certificate has expired, whether statutory clauses conform to current government templates, or whether a mandatory endorsement is absent.
+They also perform stamping as a static operation, positioning marks without regard to the signatures, dry seals, or legal text they may obscure.
+
+Beyond this technical limitation, bid documents contain proprietary cost models, trade secrets, and personal records protected under the Data Privacy Act of 2012 (RA 10173), which holds the personal information controller accountable for such data throughout processing and imposes criminal penalties for non-compliance~\cite{ra10173}.
+Any automated solution to the compliance verification problem must therefore operate entirely on local infrastructure, without transmitting bid content to external servers.
+
+This study addresses the gap using computer vision paired with explicitly defined compliance parameters.
+Structural elements of a page, such as headers, signature blocks, dates, seals, and tabular fields, are located and categorized using optical character recognition and traditional image-processing techniques, such as edge and contour detection, template matching, and connected-component analysis, based on their visual and spatial arrangement.
+Since Philippine Bidding Documents follow standardized templates prescribed by the GPPB, the expected position and structure of these regions is known in advance for each document type, allowing structural elements to be located through deterministic layout rules rather than learned inference.
+
+Applied to bid compilation, this approach extracts the elements a compliance check actually depends on: which type of document a given page is, where a date or signature field is located, whether a seal or stamp is present, and where existing marks occupy space on the page.
+Once located, these elements are evaluated against explicitly defined parameters representing the regulatory requirements themselves---for instance, whether a date falls within a valid range, or whether a template matches the current government-prescribed form.
+This keeps every compliance determination traceable to a specific, inspectable rule, requires no large pretrained model or dedicated inference infrastructure, and preserves the spatial information needed to place stamps or endorsements without occluding existing signatures, seals, or text.
+
+This study will develop a privacy-preserving bid compliance audit and document preparation framework for Philippine public procurement, combining computer vision-based document extraction, parameter-based compliance auditing, and spatially aware document assembly, operating entirely on local infrastructure.
 
 \section{Statement of the Problem}
-As technological systems grow in scope, researchers and engineering teams encounter severe bottlenecks in scalability, concurrent revision tracking, and reproducibility.
-Existing implementations frequently couple domain logic with formatting and platform-specific configurations, causing severe version collisions when multiple contributors edit shared documents or software modules.
-Furthermore, empirical benchmarking indicates that lacking modular isolation leads to unpredictable latency degradation under elevated workload volumes.
-Consequently, there is a distinct necessity for an integrated architecture that provides clear modular boundaries, predictable computational complexity, and automated consistency verification.
+Bid preparation requires the manual compilation, formatting, and verification of multi-hundred-page compliance documents under fixed submission deadlines and a non-discretionary pass/fail standard that admits no clerical discretion.
+As established above, existing tools do not close this gap: mechanical PDF utilities lack the semantic awareness to verify statutory validity or detect template drift, and cloud-based language models that do possess this capability expose the bidder to open-ended liability under the Data Privacy Act of 2012.
+Sustained verification of highly repetitive documentary requirements is precisely the task at which human review is least reliable, and the cost of a single lapse is total.
+
+The migration to fully electronic procurement under the New Government Procurement Act does not resolve this divide.
+Electronic submission through PhilGEPS changes the transport mechanism by which bids reach the procuring entity; it does not transfer the burden of assembling and verifying the documents, which remains with the bidder, nor does it relieve the bidder of the consequences of a documentary defect.
+
+Resolving this gap through a computer vision and parameter-based approach depends on the reliability of two distinct stages.
+Extraction must correctly locate and classify structural elements---dates, signature fields, seals, template regions---under standard conditions such as scanned copies, inconsistent print quality, or minor deviations from the standard template.
+Auditing must then evaluate these extracted elements against the correct compliance parameters, which in turn requires the parameters themselves to accurately and completely encode the regulatory requirements they represent.
+A failure at either stage carries the same consequence as the manual error the system is meant to prevent: an extraction error can misread a valid date as expired or miss a required field entirely, while an incomplete or outdated parameter set can pass a submission that does not in fact comply.
+Establishing how reliably this pipeline performs under realistic document conditions, and how compliance parameters can be defined, validated, and kept current with evolving GPPB templates, are therefore central to the problem rather than incidental implementation details.
+
+There is accordingly a need to investigate the architectural design, feasibility, and performance boundaries of an offline, privacy-preserving compliance audit and document preparation system that integrates computer vision-based document extraction, parameter-based compliance auditing, and spatially aware document assembly.
+Specifically, there is a need to establish the accuracy of structural element extraction under practical document conditions, the completeness and currency of the compliance parameters against actual GPPB requirements, and the extent to which such a system can reduce reliance on manual verification without introducing new, less visible points of failure.
 
 \section{Significance of the Study}
-The outcomes of this research offer tangible benefits to several key groups and engineering domains:
-\begin{itemize}
-    \item \textbf{Engineering Researchers:} Provides a formalized blueprint for constructing modular architectures that adhere strictly to institutional standards while maintaining high computational performance.
-    \item \textbf{Software and Systems Practitioners:} Establishes practical guidelines for eliminating synchronization bottlenecks and mitigating code merge conflicts during concurrent development.
-    \item \textbf{Academic Institutions:} Demonstrates an empirical framework for evaluating system throughput, precision, and reproducibility in capstone and thesis investigations.
-\end{itemize}
+This study contributes to the fields of intelligent document processing (IDP) and public procurement informatics by introducing an edge-deployable, vision-centric document intelligence framework that couples deep computer vision layout analysis with targeted optical character recognition (OCR) and deterministic statutory compliance engines.
+The integration of semantic layout segmentation and automated visual defect detection addresses the fundamental limitations of standard PDF processing tools, which apply stamps at fixed coordinates regardless of page content---frequently obscuring vital text on mixed-layout and scanned pages, and failing to detect non-textual legal marks under Philippine procurement laws (Republic Act No. 9184~\cite{ra9184} and Republic Act No. 12009~\cite{ra12009}).
+
+For private contractors, suppliers, and prospective bidding entities, the primary significance of this research lies in dramatically streamlining the operational pipeline of bidding document preparation, enabling reductions in turnaround time and administrative labor.
+Traditionally, assembling a complete bidding document submission spanning dozens of files requires a dedicated team of administrative personnel manually collating attachments, correcting page orientations, numbering sequences, and affixing stamps across hundreds of pages.
+By automating visual document classification, statutory document sequencing, and layout-aware stamp placement, the proposed platform transforms this labor-intensive workflow into a centralized process that reduces preparation time, allowing enterprises and small-to-medium contractors to participate more competitively across multiple public tenders.
+Secondarily, the system provides a robust pre-flight safeguard that supports the final manual inspection by preventing accidental clerical defects such as company stamps occluding notary jurats, signature lines, or certification dates---thereby mitigating the risk of summary disqualification under the strict non-discretionary ``pass/fail'' criterion during the mandatory transition window (2025--2028) established by Government Procurement Policy Board (GPPB) Circular No. 01-2025~\cite{gppb2025guidelines}.
+
+For researchers, systems architects, and software engineers, the study offers empirical benchmarks on deploying single-stage convolutional vision detectors (YOLOv8) compiled to Open Neural Network Exchange (ONNX) CPU runtimes for real-time document layout analysis (DLA).
+While state-of-the-art multimodal transformer architectures like LayoutLMv3~\cite{huang2022layoutlmv3} achieve high structural parsing accuracy on academic benchmarks such as DocLayNet~\cite{pfitzmann2022doclaynet}, their dual dependency on prior full-page OCR tokenization and dense multi-head self-attention imposes prohibitive latency (several seconds per page) and memory overhead on non-accelerated systems.
+This research demonstrates that unimodal, vision-driven layout segmentation can achieve low-latency inference and reliable obstacle-free stamp placement on commodity multi-core CPUs without dedicated GPU hardware, advancing the design of accessible, cost-effective document processing architectures for resource-constrained environments.
+
+What sets this research apart is not the invention of novel neural network architectures, but its innovative applied synthesis that bridges the gap between passive document understanding and active downstream document finishing.
+Conventional intelligent document processing (IDP) frameworks operate primarily as passive, read-only extraction tools that output isolated metadata or text streams, leaving physical document collation, orientation normalization, visual defect inspection, and statutory compliance finishing to manual human labor.
+In contrast, this study closes the loop from perception to production by coupling deep geometric vision guidance with deterministic statutory rule engines to actively classify, audit, sequence, and stamp complex procurement portfolios.
+Furthermore, while conventional document assembly tools achieve visual uniformity by flattening pages, an operation that strips embedded cryptographic certificates and invalidates legal digital signatures, this research introduces a dual-track architectural model that preserves the evidentiary non-repudiation of digitally signed instruments under the Electronic Commerce Act of 2000 (Republic Act No. 8792)~\cite{ra8792} while concurrently producing standardized physical bidding documents.
 
 \section{Objectives of the Study}
-The overarching objective of this thesis is to design, implement, and evaluate an optimized modular computational architecture for engineering applications.
+The main objective of this study is to design, implement, and evaluate an offline, edge-deployable document intelligence and compliance verification framework for Philippine public procurement under Republic Act No. 9184~\cite{ra9184} and Republic Act No. 12009~\cite{ra12009} that automates document classification, visual defect verification, statutory sequencing, and dynamic obstacle-free stamp placement on commodity computing infrastructure.
 Specifically, this study aims to:
 \begin{enumerate}
-    \item Identify critical structural limitations and collision points in existing monolithic pipelines.
-    \item Formulate and implement a modular framework with mathematically isolated algorithmic boundaries.
-    \item Measure operational performance metrics, including precision, recall, and processing latency, against industry baseline models.
-    \item Ensure strict compliance with institutional guidelines and reproducible execution pipelines.
+    \item Curate and annotate a domain-specific benchmark dataset of Philippine Bidding Documents (PBDs) encompassing both native digital files and scanned photocopies across core functional document layout regions to serve as the training and evaluation corpus.
+    \item Design and optimize an edge-deployable deep vision document layout segmentation model paired with a dynamic obstacle-avoidance algorithm that calculates collision-free stamp placement coordinates within statutory document margins without occluding existing document elements.
+    \item Develop an automated document classification module capable of identifying and categorizing incoming bidding documents based on visual, structural, and textual content features, independent of file naming conventions.
+    \item Implement an automated pre-flight compliance inspection pipeline that analyzes document execution pages of mandatory statutory affidavits and submission forms (such as the Omnibus Sworn Statement and Bid Securing Declaration) to verify the presence of mandatory formal marks---including authorized signatures and official seals---to mitigate procedural disqualification risks.
+    \item Construct a statutory compliance rule engine that extracts mandatory tender checklist requirements and automatically organizes heterogeneous bidder submissions into the prescribed regulatory sequence mandated by procurement authorities.
+    \item Develop an interactive local workspace interface that enables users to stage multi-file submissions, inspect detected layout regions and compliance flags, review automated stamp placements, and manually adjust document arrangements.
+    \item Incorporate a dual-output document packaging pipeline that generates a standardized, print-ready submission package for physical evaluation, while concurrently generating an evidentiary container of unaltered digital source files to preserve cryptographic signature integrity for electronic bidding compliance.
+    \item Conduct an empirical evaluation of the integrated system measuring document layout segmentation accuracy, stamp obstacle-avoidance success rates, execution latency on commodity hardware, and end-to-end preparation turnaround time relative to manual collation.
 \end{enumerate}
 
 \section{Scope and Delimitations}
-This investigation focuses primarily on the architectural modeling, algorithmic structuring, and empirical benchmarking of the proposed system.
-The software components are evaluated under standardized laboratory compute targets simulating high-concurrency transactional loads.
-The scope encompasses data ingestion pipelines, mathematical parameter optimization, and comparative metric analysis against established baselines.
-Conversely, physical hardware manufacturing and proprietary commercial deployment remain outside the delimitation of this study.
-Data collection is confined to standardized benchmark suites and synthetic load profiles representing typical industrial and academic compute environments.
+This study focuses on the design, architectural implementation, and empirical evaluation of an offline, edge-deployable document intelligence and compliance verification system specifically tailored for public procurement workflows governed by Republic Act No. 9184 and Republic Act No. 12009.
+The framework is restricted to processing Philippine Bidding Documents (PBDs) across standard competitive bidding categories, including Goods, Infrastructure Projects, and Consulting Services.
+
+The visual and layout analysis pipeline is optimized for single-stage object detection architectures (specifically YOLOv8) exported to ONNX runtimes running on commodity multi-core central processing units (CPUs), deliberately excluding cloud-based inference endpoints or high-performance dedicated graphics processing units (GPUs) to enforce complete data privacy in accordance with the Data Privacy Act of 2012 (RA 10173).
+Static compliance verification rules are delimited to mandatory statutory execution pages, such as the Omnibus Sworn Statement (OSS), Bid Securing Declaration (BSD), and standard submission forms prescribed by the Government Procurement Policy Board (GPPB).
+
+The operational boundaries of the compliance auditing engine are strictly delimited to procedural, clerical, and visual verification criteria evaluated during the preliminary bid examination.
+The system confirms the physical presence and layout co-location of required formal marks (such as authorized signatures and notary dry seals on the Omnibus Sworn Statement and Bid Securing Declaration), but does not perform forensic handwriting analysis, stroke-pressure verification, or criminal forgery detection.
+Crucially, the platform operates strictly as a procedural preparation and pre-flight verification instrument, processing and arranging only the documentary assets directly supplied by the user.
+The system does not certify the factual veracity, legal validity, or substantive truthfulness of uploaded records, nor does it assume liability for fraudulent, altered, or non-compliant submissions.
+In accordance with the statutory declarations sworn under the Government Procurement Policy Board (GPPB) Omnibus Sworn Statement, the legal burden and sole responsibility for ensuring that all submitted instruments are authentic, complete, and truthful remain entirely with the prospective bidding entity under penalty of perjury.
+
+Furthermore, under Section 30 of RA 9184~\cite{ra9184} and Section 29 of RA 12009~\cite{ra12009}, the preliminary opening of bids is governed by a non-discretionary ``pass/fail'' standard that restricts evaluation to the presence or absence of required documentary submissions.
+Consequently, while the platform verifies the procedural presence and template conformity of the required Technical Specifications statement, substantive technical evaluation---specifically determining whether the detailed engineering specifications, catalog narratives, or manufacturer brochures of an offered product satisfy the procuring entity's terms of reference---is reserved exclusively for the Bids and Awards Committee through its Technical Working Group (BAC-TWG) and is outside the scope of this system.
+Similarly, substantive legal adjudication, qualitative contractor scoring, live external verifications against the Supreme Court Notarial Roll or BIR tax portals, and external Public Key Infrastructure (PKI) certificate revocation queries fall outside the system's scope.
+Finally, the architecture deliberately excludes cloud-hosted Multimodal Large Language Models (MLLMs) and high-parameter external APIs to eliminate recurring operational costs for small contractors and prevent off-premise data exposure under Republic Act No. 10173~\cite{ra10173}, while international procurement documents governed by foreign financial institutions (such as World Bank, Asian Development Bank, or FIDIC templates) are excluded from this study.
