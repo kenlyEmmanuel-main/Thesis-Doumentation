@@ -100,4 +100,19 @@ Specifically, this study aims to:
 \end{enumerate}
 
 \section{Scope and Delimitations}
-This section defines the operational scope, technical boundaries, and delimitations of the document intelligence framework.
+This study focuses on the design, architectural implementation, and empirical evaluation of an offline, edge-deployable document intelligence and compliance verification system specifically tailored for public procurement workflows governed by Republic Act No. 9184 and Republic Act No. 12009.
+The framework is restricted to processing Philippine Bidding Documents (PBDs) across standard competitive bidding categories, including Goods, Infrastructure Projects, and Consulting Services.
+
+The visual and layout analysis pipeline is optimized for single-stage object detection architectures (specifically YOLOv8) exported to ONNX runtimes running on commodity multi-core central processing units (CPUs), deliberately excluding cloud-based inference endpoints or high-performance dedicated graphics processing units (GPUs) to enforce complete data privacy in accordance with the Data Privacy Act of 2012 (RA 10173).
+Static compliance verification rules are delimited to mandatory statutory execution pages, such as the Omnibus Sworn Statement (OSS), Bid Securing Declaration (BSD), and standard submission forms prescribed by the Government Procurement Policy Board (GPPB).
+
+The operational boundaries of the compliance auditing engine are strictly delimited to procedural, clerical, and visual verification criteria evaluated during the preliminary bid examination.
+The system confirms the physical presence and layout co-location of required formal marks (such as authorized signatures and notary dry seals on the Omnibus Sworn Statement and Bid Securing Declaration), but does not perform forensic handwriting analysis, stroke-pressure verification, or criminal forgery detection.
+Crucially, the platform operates strictly as a procedural preparation and pre-flight verification instrument, processing and arranging only the documentary assets directly supplied by the user.
+The system does not certify the factual veracity, legal validity, or substantive truthfulness of uploaded records, nor does it assume liability for fraudulent, altered, or non-compliant submissions.
+In accordance with the statutory declarations sworn under the Government Procurement Policy Board (GPPB) Omnibus Sworn Statement, the legal burden and sole responsibility for ensuring that all submitted instruments are authentic, complete, and truthful remain entirely with the prospective bidding entity under penalty of perjury.
+
+Furthermore, under Section 30 of RA 9184~\cite{ra9184} and Section 29 of RA 12009~\cite{ra12009}, the preliminary opening of bids is governed by a non-discretionary ``pass/fail'' standard that restricts evaluation to the presence or absence of required documentary submissions.
+Consequently, while the platform verifies the procedural presence and template conformity of the required Technical Specifications statement, substantive technical evaluation---specifically determining whether the detailed engineering specifications, catalog narratives, or manufacturer brochures of an offered product satisfy the procuring entity's terms of reference---is reserved exclusively for the Bids and Awards Committee through its Technical Working Group (BAC-TWG) and is outside the scope of this system.
+Similarly, substantive legal adjudication, qualitative contractor scoring, live external verifications against the Supreme Court Notarial Roll or BIR tax portals, and external Public Key Infrastructure (PKI) certificate revocation queries fall outside the system's scope.
+Finally, the architecture deliberately excludes cloud-hosted Multimodal Large Language Models (MLLMs) and high-parameter external APIs to eliminate recurring operational costs for small contractors and prevent off-premise data exposure under Republic Act No. 10173~\cite{ra10173}, while international procurement documents governed by foreign financial institutions (such as World Bank, Asian Development Bank, or FIDIC templates) are excluded from this study.
