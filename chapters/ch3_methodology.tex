@@ -1,83 +1,498 @@
 \chapter{Methodology}
 \label{ch:methodology}
 
-\section{System's Model}
-The proposed system model is structured into three interdependent operational dimensions: hardware, software, and peopleware.
-The hardware layer comprises high-performance multi-core processors, dedicated accelerator memory, and network interconnects that provide the physical execution substrate.
-The software layer encapsulates modular algorithmic services, preprocessing pipelines, automated build recipes, and synchronization protocols that manage data flow across processing boundaries.
-The peopleware dimension accounts for system operators, researchers, and collaborative peer engineers who interact with the pipeline through standardized version control and terminal interfaces.
-Together, these three components form a coherent architecture that isolates localized computations while guaranteeing system-wide reproducibility.
+\section{System Model}
+\label{sec:system_model}
 
-\subsection{Program Flowchart}
-The algorithmic workflow operates through sequential phases comprising initialization, data validation, localized optimization, and synchronized aggregation.
-Upon startup, the system reads runtime parameters and verifies configuration integrity against institutional constraints.
-The ingested dataset is partitioned into deterministic shards and forwarded to modular worker threads.
-Each worker thread computes local empirical gradients and validates intermediate outputs against convergence criteria before committing results to the primary registry.
+The system is designed as an offline, edge-deployable document processing framework for public procurement workflows.
+It processes heterogeneous, multi-file bidder submissions to generate a compliant, print-ready document package and a parallel digital evidentiary portfolio.
+The architecture consists of nine primary processing components, executed locally on non-accelerated commodity CPU hardware to maintain strict edge data sovereignty under the Data Privacy Act of 2012 (RA 10173).
+Figure 3.1.1 illustrates the structural data flow across these functional layers.
 
-\subsection{Physical Setup}
-The experimental physical setup was deployed on dedicated workstation infrastructure featuring an Intel Core processor, 16~GB of host memory, and high-speed NVMe storage.
-All benchmark scenarios were executed under standardized thermal and power conditions to prevent hardware-induced latency fluctuations.
-Network interfaces were configured via local loopback channels to isolate computational processing latency from external socket overhead.
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.1.1: End-to-End System Architecture Diagram}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\caption{End-to-End System Architecture Diagram}
+\label{fig_methodology_3_1_1}
+\end{figure}
 
-\subsection{Computations}
-The core computational objective optimizes parameter vectors by minimizing empirical risk over all training observations while enforcing regularization:
-\begin{equation}
-\label{eq:objective_fn}
-\mathcal{L}(\theta) = \frac{1}{N} \sum_{i=1}^{N} \ell(f(x_i; \theta), y_i) + \lambda \|\theta\|_2^2
-\end{equation}
-where $\theta$ denotes the parameter vector, $N$ represents the sample cardinality, $\ell(\cdot)$ is the loss metric, and $\lambda$ acts as the regularization coefficient.
-The gradient updates proceed via stochastic approximations that guarantee convergence within bounded iterations.
+\subsection{Component 1: File Ingestion \& Pre-processing Pipeline}
 
-\section{Cost Breakdown}
-Table \ref{tab:cost_breakdown} presents the itemized cost breakdown for the hardware, software development tools, and experimental infrastructure utilized throughout this study.
+This component validates, sanitizes, and normalizes input binary documents prior to layout analysis and classification.
+
+Proposed Component Type: Python-based asynchronous ingestion worker built on PyMuPDF (MuPDF C-engine binding) and Ghostscript wrappers.
+
+Input: Multi-file bidding document uploads (native digital PDFs, scanned PDF image streams, JPEG/PNG images) uploaded via the workspace interface.
+
+Core Functions: (1) Performs JIT Flate stream repair on malformed PDF byte headers via PostScript stream sanitization; (2) calculates baseline SHA-256 binary hash digests for incoming source files; (3) executes server-side CTM page geometry normalization to standard A4 portrait dimensions; (4) renders server-side WebP page preview images (at 150 DPI) for interactive client rendering.
+
+Output: Sanitized binary PDF stream, immutable source byte manifest with SHA-256 hashes, and WebP preview bitstreams.
+
+\subsection{Component 2: Document Layout Segmentation Engine}
+
+This component executes deep visual representation learning to localize and classify macroscopic visual primitives across document pages.
+
+Proposed Component Type: Single-stage YOLOv8s convolutional object detector fine-tuned on Philippine Bidding Documents, compiled to ONNX format and executed on ONNX Runtime CPU.
+
+Input: Rasterized document page images (640 $\times$ 640 normalized tensors).
+
+Core Functions: (1) Performs anchor-free spatial bounding-box regression and classification in a single forward pass; (2) segments page primitives across four target classes: Signature\_Block, Official\_Seal, Table\_Grid, and Text\_Paragraph; (3) outputs spatial bounding box coordinates normalized to user coordinate space.
+
+Output: Structured JSON bounding box array containing spatial coordinates [x\_min, y\_min, x\_max, y\_max], class labels, and detection confidence scores per page.
+
+\subsection{Component 3: Targeted In-Memory OCR Engine}
+
+This component extracts textual tokens from isolated visual regions without performing computationally expensive full-page optical character recognition.
+
+Proposed Component Type: RapidOCR framework utilizing DBNet++ (Differentiable Binarization) for text line detection and SVTR (Single Visual Model) for character recognition, running in C-buffer shared memory.
+
+Input: Cropped image memory buffers derived from bounding box coordinates predicted by Component 2.
+
+Core Functions: (1) Isolates horizontal and multi-oriented text polygon strips; (2) decodes alphanumeric character sequences directly from cropped image tensors; (3) passes extracted text strings to deterministic regular expression parsers to capture statutory keywords, dates, and title headers.
+
+Output: Extracted text key-value map containing execution dates, document title strings, notary jurat details, and header keywords.
+
+\subsection{Component 4: Document Classification Module}
+
+This component identifies and categorizes incoming unorganized bidding documents independent of original file naming conventions.
+
+Proposed Component Type: Hybrid multi-modal classification rule engine combining visual layout feature vectors from Component 2 and extracted textual anchors from Component 3.
+
+Input: Layout bounding box distributions and extracted text metadata.
+
+Core Functions: (1) Matches structural features and statutory title strings against standard Philippine Bidding Documents (PBD) taxonomies; (2) classifies files into core functional categories (e.g., Omnibus Sworn Statement, Bid Securing Declaration, Mayor's Permit, Tax Clearance, Audited Financial Statements, Technical Specifications).
+
+Output: Document class assignment metadata and mapped tender checklist category tag.
+
+\subsection{Component 5: Deterministic Statutory Pre-flight Audit Engine}
+
+This component evaluates document execution pages against statutory requirements derived from RA 12009 and GPPB rules under the non-discretionary pass/fail standard.
+
+Proposed Component Type: Deterministic rule-based compliance evaluator operating on spatial layout bounding boxes and extracted text parameters.
+
+Input: Classified document instances, detected visual mark locations (signatures, notary seals), and extracted execution dates.
+
+Core Functions: (1) Verifies co-location of Signature\_Block and Official\_Seal primitives on mandatory statutory execution pages (OSS and BSD); (2) evaluates temporal validity of execution dates against tender submission deadlines; (3) verifies template conformance against standard GPPB statutory revisions.
+
+Output: Structured pre-flight compliance audit log (Pass/Fail/Warning flags) with specific clerical defect explanations.
+
+\subsection{Component 6: Dynamic Non-Occluding Stamp Placement Engine}
+
+This component calculates collision-free placement coordinates for endorsement stamps and pagination marks without obscuring underlying document elements.
+
+Proposed Component Type: Spatial obstacle avoidance and 2D bounding-box clearance algorithm.
+
+Input: Target page dimensions, layout bounding box obstacles from Component 2, and required stamp/pagination dimensions.
+
+Core Functions: (1) Models all detected text blocks, signatures, seals, and tables as spatial obstacles; (2) evaluates 2D whitespace clearance within target margin regions (lower-right quadrant and outer margins); (3) dynamically calculates collision-free affine matrix transformation coordinates for stamp overlays.
+
+Output: Calculated non-occluding stamp coordinates [x, y, rotation] per page.
+
+\subsection{Component 7: Local Interactive Workspace Interface}
+
+This component provides client-side visual inspection, manual adjustment, and staging capabilities for document operators.
+
+Proposed Component Type: React-based single-page application utilizing Virtual DOM state management, Framer Motion vector overlays, and SVG graphic rendering layers.
+
+Input: WebP page preview streams, bounding box JSON payloads, and pre-flight compliance audit logs.
+
+Core Functions: (1) Renders interactive document staging board with multi-file reordering and drag-and-drop sequencing; (2) displays real-time visual vector overlays of bounding boxes and compliance warnings; (3) allows human-in-the-loop override of automated stamp placements and document sequence order.
+
+Output: Operator-verified document sequence assembly list and confirmed stamp placement coordinate state.
+
+\subsection{Component 8: Track 1 Visual Presentation Package Generator}
+
+This component compiles the unified, flattened physical submission package for printed bid evaluation.
+
+Proposed Component Type: PyMuPDF PDF stream writer and CTM graphics operator serialization engine.
+
+Input: Sanitized source PDFs, operator-approved sequence order, and confirmed stamp coordinates.
+
+Core Functions: (1) Merges multi-file documents according to statutory tender sequence; (2) serializes visual stamp vector graphics into page /Contents streams via CTM affine transformations; (3) flattens interactive form annotations; (4) bakes dynamic sequential pagination into margin headers/footers.
+
+Output: Single, standardized, CTM-flattened, sequentially paginated, and stamped A4 PDF submission package for physical printing.
+
+\subsection{Component 9: Track 2 Evidentiary Digital Package Generator}
+
+This component builds the tamper-evident digital submission portfolio to preserve PKI digital signatures for electronic bidding under RA 8792.
+
+Proposed Component Type: Cryptographic archiving pipeline and JSON metadata generator.
+
+Input: Unaltered binary source files, SHA-256 baseline hash manifest, pre-flight audit logs, and sequence mapping metadata.
+
+Core Functions: (1) Binds original, byte-unaltered source files without modifying PDF stream dictionaries or invalidating embedded PKCS\#7 digital signature checksums; (2) compiles a cryptographic verification manifest linking source file hashes to sequence order; (3) packages files into an encrypted digital container.
+
+Output: Evidentiary digital package container containing byte-unaltered source files, SHA-256 verification manifest, and audit logs for e-bidding submission.
+
+\section{Data Flow Architecture}
+\label{sec:data_flow}
+
+The data flow architecture describes the transformations and data movements across system boundaries, from initial file ingestion through feature extraction, compliance auditing, dynamic spatial stamp placement, and output generation.
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.2.1: Level 0 and Level 1 Data Flow Diagrams}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\caption{Level 0 and Level 1 Data Flow Diagrams}
+\label{fig_methodology_3_2_1}
+\end{figure}
+
+\section{Program Flowcharts}
+\label{sec:program_flowcharts}
+
+The system's operational logic is divided into specialized processing pipelines governed by deterministic decision rules, automated visual inspection mechanisms, and spatial coordinate transformation routines.
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.3.1: File Ingestion and Pre-processing Flowchart}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\caption{File Ingestion and Pre-processing Flowchart}
+\label{fig_methodology_3_3_1}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.3.2: Layout Segmentation and Targeted OCR Flowchart}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\caption{Layout Segmentation and Targeted OCR Flowchart}
+\label{fig_methodology_3_3_2}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.3.3: Pre-flight Statutory Audit \& Classification Flowchart}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\caption{Pre-flight Statutory Audit \& Classification Flowchart}
+\label{fig_methodology_3_3_3}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.3.4: Dynamic Obstacle-Free Stamp Placement Flowchart}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\caption{Dynamic Obstacle-Free Stamp Placement Flowchart}
+\label{fig_methodology_3_3_4}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.3.5: Dual-Track Package Assembly Flowchart}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\caption{Dual-Track Package Assembly Flowchart}
+\label{fig_methodology_3_3_5}
+\end{figure}
+
+\section{Local Workspace Dashboard and User Interface Design}
+\label{sec:ui_design}
+
+The local interactive workspace interface provides client-side visual inspection, staging, manual override, and document assembly capabilities through a React-based single-page application.
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.1: File Ingestion \& Upload Workspace Interface}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\caption{File Ingestion \& Upload Workspace Interface}
+\label{fig_methodology_3_4_1}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.2: Document Staging \& Reordering Board}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\caption{Document Staging \& Reordering Board}
+\label{fig_methodology_3_4_2}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.3: Visual Layout Segmentation Viewer}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\caption{Visual Layout Segmentation Viewer}
+\label{fig_methodology_3_4_3}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.4: Pre-flight Compliance Audit Panel}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\caption{Pre-flight Compliance Audit Panel}
+\label{fig_methodology_3_4_4}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.5: Stamp Placement \& Margin Inspection Workspace}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\caption{Stamp Placement \& Margin Inspection Workspace}
+\label{fig_methodology_3_4_5}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.6: Dual-Track Packaging Export Screen}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\caption{Dual-Track Packaging Export Screen}
+\label{fig_methodology_3_4_6}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.7: Interactive System Settings \& Configuration Panel}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\caption{Interactive System Settings \& Configuration Panel}
+\label{fig_methodology_3_4_7}
+\end{figure}
+
+\section{Physical and Environmental Setup}
+\label{sec:physical_setup}
+
+To guarantee strict edge data sovereignty and eliminate external data liabilities under Republic Act No. 10173 (Data Privacy Act of 2012), the complete intelligent document processing pipeline is deployed and evaluated on a standardized commodity local edge computing workstation.
+The hardware configuration excludes dedicated Graphics Processing Units (GPUs) and external cloud endpoints, benchmarking the system's runtime viability under non-accelerated CPU environments typical of municipal government offices and small contractor premises.
+
+\subsection{Workstation Hardware Specifications}
+
+The local execution environment comprises the hardware specifications detailed in Table 3.5.1.
 
 \begin{table}[htbp]
 \centering
-\caption{Project Cost and Expense Breakdown}
+\caption{Workstation Hardware Specifications and Execution Environment}
+\label{tab:hardware_specs}
+\begin{singlespace}
+\begin{tabular}{p{4.5cm}p{9cm}}
+\toprule[1.5pt]
+\textbf{Hardware Component} & \textbf{Specification \& Architecture Target} \\
+\midrule[1.0pt]
+Central Processing Unit (CPU) & AMD Ryzen 7 5800X / Intel Core i7-12700K (8 Cores / 16 Threads, AVX-512 / AVX2 Instruction Set) \\
+System Memory (RAM) & 32 GB DDR4 / DDR5 Dual-Channel (3200 MHz / 4800 MHz) \\
+Primary Storage & 1 TB NVMe PCIe Gen4 x4 Solid State Drive (Read: 5000 MB/s, Write: 4400 MB/s) \\
+Graphics Accelerator & Integrated / Basic Display Adapter Only (Dedicated CUDA/Tensor Cores Disabled) \\
+Network Topology & Air-Gapped Local Loopback (127.0.0.1) / Isolated Local Area Network \\
+\bottomrule[1.5pt]
+\end{tabular}
+\end{singlespace}
+\end{table}
+
+\subsection{Software Runtimes \& Dependency Stack}
+
+The software ecosystem relies on open-source, vendor-neutral execution engines and native C-bindings operating on Linux / Windows Subsystem for Linux (WSL2), summarized in Table 3.5.2.
+
+\begin{table}[htbp]
+\centering
+\caption{Software Runtimes, Execution Frameworks, and Dependency Stack}
+\label{tab:software_specs}
+\begin{singlespace}
+\begin{tabular}{p{4cm}p{2.5cm}p{7cm}}
+\toprule[1.5pt]
+\textbf{Software / Framework} & \textbf{Version} & \textbf{Operational Purpose} \\
+\midrule[1.0pt]
+Operating System & Ubuntu 22.04 LTS & Host Kernel \& Resource Management \\
+Python Runtime & v3.10.12 & Backend Orchestration \& Pipeline Execution \\
+ONNX Runtime CPU & v1.16.3 & YOLOv8s Layout Segmentation Inference \\
+RapidOCR (PP-OCRv3) & v1.3.2 & Targeted C-Buffer Text Detection \& Recognition \\
+PyMuPDF (MuPDF Binding) & v1.23.8 & PDF Stream Manipulation, CTM Flattening, \& Rasterization \\
+Ghostscript & v9.55.0 & JIT Flate Stream Repair \& PostScript Sanitization \\
+React / Webpack & v18.2.0 & Client-Side Single-Page Application Workspace UI \\
+\bottomrule[1.5pt]
+\end{tabular}
+\end{singlespace}
+\end{table}
+
+\section{Engineering Computations and Mathematical Formulations}
+\label{sec:computations}
+
+This section details the proprietary engineering formulations, geometric transformation matrices, spatial clearance optimization algorithms, and statutory graph-matching models that govern document processing, dual coordinate space alignment, dynamic non-occluding stamp placement, and automated submission arrangement.
+
+\subsection{Coordinate Transformation Matrices (CTM), Resizing, and Orientation Normalization}
+
+Document pages ingested from heterogeneous sources exhibit non-standard page dimensions, arbitrary scale variations, and angular orientation offsets.
+The visual compilation pipeline normalizes all incoming page leaf nodes (/Type /Page) to standard ISO 216 A4 portrait dimensions (595.276 pt $\times$ 841.890 pt at 72 points per inch) using two-dimensional homogeneous coordinate transformations.
+
+Let $P_{\text{src}} = (W_{\text{src}}, H_{\text{src}})$ denote the bounding dimensions derived from a page's \texttt{/MediaBox} dictionary, and $P_{\text{target}} = (W_{\text{target}}, H_{\text{target}})$ denote standard A4 user space boundaries ($595.28 \times 841.89$ points at 72 points per inch).
+To preserve original aspect ratio while eliminating margin clipping, isotropic scaling factor $s$ and translation offsets $(t_x, t_y)$ are computed as:
+
+\begin{equation}
+\label{eq:scaling_factors}
+s = \min\left( \frac{W_{\text{target}}}{W_{\text{src}}}, \frac{H_{\text{target}}}{H_{\text{src}}} \right), \quad t_x = \frac{W_{\text{target}} - s \cdot W_{\text{src}}}{2}, \quad t_y = \frac{H_{\text{target}} - s \cdot H_{\text{src}}}{2}
+\end{equation}
+
+To accommodate orientation disparities---such as landscape engineering drawings or inverted municipal permits---the Current Transformation Matrix operator $\mathbf{M}_{\text{norm}}$ combining rotation by angle $\theta \in \{0^\circ, 90^\circ, 180^\circ, 270^\circ\}$, isotropic scaling factor $s$, and translation $(t_x, t_y)$ maps any source coordinate $(x, y)$ to normalized A4 destination space $(x', y')$ according to:
+
+\begin{equation}
+\label{eq:ctm_rotation}
+\mathbf{M}_{\text{norm}} = \begin{bmatrix}
+s \cos\theta & s \sin\theta & 0 \\
+-s \sin\theta & s \cos\theta & 0 \\
+t_x & t_y & 1
+\end{bmatrix}
+\end{equation}
+
+\subsection{Dual Perception Coordinate Space Alignment}
+
+A critical architectural challenge is mapping predicted visual layout bounding boxes from the vision model's pixel raster space (640 $\times$ 640 normalized tensor coordinates) back into the PDF vector graphic coordinate space (72 DPI point units) for accurate CTM stamp projection.
+
+Let $B_{\text{pixel}} = [x_{\min}^{\text{px}}, y_{\min}^{\text{px}}, x_{\max}^{\text{px}}, y_{\max}^{\text{px}}]$ represent a predicted layout bounding box generated by Component 2 on a WebP preview raster image of resolution $W_{\text{img}} \times H_{\text{img}}$ pixels.
+In standard ISO 32000 PDF user coordinate space, the vertical axis origin $(0, 0)$ is situated at the bottom-left corner of the page, whereas raster image space originates at the top-left corner.
+The bidirectional affine transformation mapping a pixel bounding box $B_{\text{pixel}}$ to a PDF user space bounding box $B_{\text{pdf}} = [x_{\text{left}}, y_{\text{bottom}}, x_{\text{right}}, y_{\text{top}}]$ on a target canvas of size $W_{\text{pdf}} \times H_{\text{pdf}}$ points is expressed as:
+
+\begin{equation}
+\label{eq:coord_alignment_x}
+x_{\text{left}} = \left( \frac{x_{\min}^{\text{px}}}{W_{\text{img}}} \right) W_{\text{pdf}}, \quad x_{\text{right}} = \left( \frac{x_{\max}^{\text{px}}}{W_{\text{img}}} \right) W_{\text{pdf}}
+\end{equation}
+
+\begin{equation}
+\label{eq:coord_alignment_y}
+y_{\text{top}} = H_{\text{pdf}} - \left( \frac{y_{\min}^{\text{px}}}{H_{\text{img}}} \right) H_{\text{pdf}}, \quad y_{\text{bottom}} = H_{\text{pdf}} - \left( \frac{y_{\max}^{\text{px}}}{H_{\text{img}}} \right) H_{\text{pdf}}
+\end{equation}
+
+\subsection{Active Dodging: Dynamic Stamp Obstacle-Avoidance Formulation}
+
+To prevent endorsement stamps and pagination headers/footers from obscuring existing text, signatures, or notary seals, the stamp placement engine models all detected layout regions on page k as a set of 2D spatial obstacle bounding boxes O\_k = {B\_1, B\_2, ..., B\_n}.
+
+Let $S = (w_s, h_s)$ denote the physical dimensions of the stamp to be affixed.
+The search space for valid placements is constrained to designated page margin region $\mathcal{M}_{\text{anchor}} \subseteq \mathbf{R}^2$ (such as the lower-right quadrant).
+A candidate coordinate tuple $(x, y)$ defines a proposed stamp box $B_{\text{stamp}}(x, y) = [x, y, x + w_s, y + h_s]$.
+The non-occluding placement constraint enforces zero spatial intersection across all obstacles in $\mathcal{O}_k$:
+
+\begin{equation}
+\label{eq:stamp_collision_constraint}
+\forall B_i \in \mathcal{O}_k, \quad \text{Area}\left( B_{\text{stamp}}(x, y) \cap B_i \right) = 0
+\end{equation}
+
+The optimal non-occluding stamp coordinate (x*, y*) is determined by minimizing an objective cost function J(x, y) that penalizes proximity to adjacent obstacles while maintaining alignment with the preferred anchor coordinate (x\_pref, y\_pref):
+
+\begin{equation}
+\label{eq:stamp_objective_opt}
+(x^*, y^*) = \operatorname*{argmin}_{(x, y) \in \mathcal{M}_{\text{anchor}}} \left[ \alpha \| (x, y) - (x_{\text{pref}}, y_{\text{pref}}) \|^2 + \beta \sum_{i=1}^{n} \frac{1}{d(B_{\text{stamp}}(x, y), B_i) + \epsilon} \right]
+\end{equation}
+
+where d(B\_stamp, B\_i) measures the minimum Euclidean edge-to-edge distance between the candidate stamp box and obstacle B\_i, $\epsilon$ is a small smoothing constant, and $\alpha$, $\beta$ are weighting hyper-parameters prioritizing clearance over anchor proximity.
+
+\subsection{Asset-to-Checklist Matching \& Statutory Arrangement Algorithm}
+
+The statutory compliance rule engine automatically organizes unorganized uploaded files into the mandatory document sequence prescribed by the Bids and Awards Committee (BAC) checklist under Republic Act No. 12009.
+The sequencing logic is formalized as a directed bipartite graph matching problem.
+
+Let $U = \{u_1, u_2, \dots, u_m\}$ denote the set of unorganized uploaded document instances, and $C = \{c_1, c_2, \dots, c_k\}$ represent the ordered list of statutory checklist items required by the Philippine Bidding Documents.
+A match scoring function $S(u_i, c_j) \in [0, 1]$ calculates affinity based on a linear combination of semantic textual similarity and structural visual layout compliance:
+
+A match scoring function S(u\_i, c\_j) $\in$ [0, 1] calculates the likelihood that document u\_i satisfies checklist item c\_j:
+
+\begin{equation}
+\label{eq:checklist_similarity}
+S(u_i, c_j) = w_1 \cdot \text{CosineSimilarity}(f_{\text{textual}}, \text{KeywordSet}(c_j)) + w_2 \cdot \text{LayoutMatch}(f_{\text{visual}}, \text{LayoutTemplate}(c_j))
+\end{equation}
+
+The global optimal document arrangement permutes set U into sequence $\pi$* that maximizes total checklist alignment while identifying missing mandatory items:
+
+\begin{equation}
+\label{eq:optimal_permutation}
+\pi^* = \operatorname*{argmax}_{\pi} \sum_{j=1}^{k} S( u_{\pi(j)}, c_j ) \quad \text{subject to} \quad S( u_{\pi(j)}, c_j ) \ge \tau_{\text{threshold}}
+\end{equation}
+
+Checklist items c\_j for which max\_{i} S(u\_i, c\_j) < $\tau_{\text{threshold}}$ are automatically flagged as missing mandatory requirements within the pre-flight statutory audit log.
+
+A central architectural objective of this research is eliminating recurring cloud API subscriptions, GPU server hosting fees, and proprietary software licensing costs.
+By leveraging open-source computer vision libraries and executing on local commodity computing hardware, the system minimizes capital and operational expenditure.
+
+\section{Cost Breakdown and Expenditure}
+\label{sec:cost_breakdown}
+
+\subsection{Development and Hardware Expenditure}
+
+Table 3.7.1 details the initial capital expenditures required to establish the edge development environment.
+
+\begin{table}[htbp]
+\centering
+\caption{Development and Hardware Expenditure Breakdown}
 \label{tab:cost_breakdown}
 \begin{singlespace}
-\begin{tabular}{llcr}
+\begin{tabular}{p{7.5cm}p{3cm}p{3cm}}
 \toprule[1.5pt]
-\textbf{Category} & \textbf{Item Description} & \textbf{Qty} & \textbf{Estimated Cost (PHP)} \\
+\textbf{Resource Item / Particulars} & \textbf{Cost (PHP -- \textpeso)} & \textbf{Cost (USD -- \$)} \\
 \midrule[1.0pt]
-Hardware & Workstation Host System & 1 & 45,000.00 \\
-Hardware & Auxiliary Testing Storage & 1 & 4,500.00 \\
-Software & Antigravity IDE \& Toolchain & 1 & 0.00 \\
-Software & MiKTeX LaTeX Distribution & 1 & 0.00 \\
-Materials & Printing and Documentation Supplies & Lot & 2,500.00 \\
+Commodity Edge Workstation (Ryzen 7, 32GB RAM, 1TB SSD) & ₱45,000.00 & \$800.00 \\
+High-Speed Document Flatbed/Sheetfed Scanner & ₱12,500.00 & \$220.00 \\
+Domain Benchmark Dataset Acquisition \& Printing & ₱3,500.00 & \$62.00 \\
+Software Licenses (PyMuPDF, RapidOCR, ONNX, React) & ₱0.00 (Open Source) & \$0.00 (Open Source) \\
+Uninterruptible Power Supply (UPS 1200VA) & ₱4,800.00 & \$85.00 \\
 \midrule[1.0pt]
-\textbf{Total} & & & \textbf{52,000.00} \\
+\textbf{Total Estimated Capital Expenditure} & \textbf{₱65,800.00} & \textbf{\$1,167.00} \\
 \bottomrule[1.5pt]
 \end{tabular}
 \end{singlespace}
 \end{table}
 
-\section{Gantt Chart}
-The project execution followed a structured schedule spanning research design, software implementation, testing, and documentation revisions.
-A complete graphical timeline showing task duration against chronological progression is presented in Appendix A.
+\subsection{Operational and Comparative Cost Model}
 
-\section{Test and Evaluation}
-System evaluation was conducted by running synthetic and standard benchmarking workloads through the pipeline to quantify precision, recall, latency, and throughput.
+Compared to commercial cloud IDP providers (charging ~\textdollar 0.05 to \textdollar 0.10 per page for multimodal AI extraction and document OCR), processing a 500-page bidding dossier on cloud endpoints incurs ~\textdollar 25.00 to \textdollar 50.00 per submission.
+Over an annual operational volume of 100 tender submissions, cloud costs exceed ₱140,000.00 (\textdollar 2,500.00).
+The proposed edge architecture reduces recurring operational costs strictly to local electrical power consumption (~65W average draw), achieving full capital cost amortization within 6 months of active deployment.
 
-\subsection{Results and Discussion}
-The collected empirical evaluation data are summarized in Table \ref{tab:comparison}, presenting performance metrics across two baseline configurations and our proposed architecture.
+\section{Project Development Schedule and Milestones}
+\label{sec:project_schedule}
+
+The engineering timeline spans eight work months, structured across six distinct phases executed sequentially and iteratively from Dataset Curation through Final System Validation.
+
+\subsection{Work Breakdown Structure \& Development Phases}
+
+The project development schedule is partitioned into the following operational milestones:
+
+Phase 1: Dataset Acquisition \& Annotation (Months 1-2): Curate 500+ PBD document pages, perform Label Studio bounding box annotations across four target layout classes, and establish baseline train/val/test splits.
+
+Phase 2: Vision Model Training \& ONNX Optimization (Months 2-3): Fine-tune YOLOv8s from DocLayNet checkpoints, optimize CIoU/DFL loss parameters, export model to ONNX format, and benchmark CPU vector inference execution.
+
+Phase 3: Pipeline Engine \& Rule Development (Months 4-5): Implement Ghostscript Flate stream repair, RapidOCR targeted C-buffers, deterministic regex parsers, pre-flight statutory pass/fail rules, and non-occluding stamp placement algorithms.
+
+Phase 4: Workspace UI \& Dual-Track Integration (Months 5-6): Construct React staging interface, Framer Motion SVG overlays, Track 1 PyMuPDF CTM flattener, and Track 2 SHA-256 evidentiary digital packager.
+
+Phase 5: Empirical Evaluation \& Testing (Months 6-7): Execute benchmark experiments measuring mAP50, IoU collision rates, CPU latency, and manual vs. automated turnaround times.
+
+Phase 6: Final Manuscript \& Thesis Defense (Month 8): Consolidate empirical benchmarks, refine system documentation, and conduct final oral defense.
+
+\subsection{Project Timeline \& Gantt Schedule Summary}
+
+Table 3.8.1 summarizes the milestone distribution across the eight-month engineering schedule.
 
 \begin{table}[htbp]
 \centering
-\caption{System Performance Comparison}
-\label{tab:comparison}
+\caption{Project Milestone and Phase Distribution Across the Eight-Month Schedule}
+\label{tab:milestone_schedule}
 \begin{singlespace}
-\begin{tabular}{lccc}
+\begin{tabular}{p{5.5cm}cccccccc}
 \toprule[1.5pt]
-\textbf{Model Architecture} & \textbf{Precision (\%)} & \textbf{Recall (\%)} & \textbf{F1-Score (\%)} \\
+\textbf{Project Phase / Milestone} & \textbf{M1} & \textbf{M2} & \textbf{M3} & \textbf{M4} & \textbf{M5} & \textbf{M6} & \textbf{M7} & \textbf{M8} \\
 \midrule[1.0pt]
-Baseline Model A & 88.4 & 85.1 & 86.7 \\
-Baseline Model B & 91.2 & 89.6 & 90.4 \\
-\textbf{Proposed System} & \textbf{95.7} & \textbf{94.8} & \textbf{95.2} \\
+P1: Dataset Acquisition \& Annotation & \textbf{X} & \textbf{X} &  &  &  &  &  &  \\
+P2: Vision Training \& ONNX Optimization &  & \textbf{X} & \textbf{X} &  &  &  &  &  \\
+P3: Core Engine \& Statutory Audit Rules &  &  &  & \textbf{X} & \textbf{X} &  &  &  \\
+P4: Workspace UI \& Dual-Track Assembly &  &  &  &  & \textbf{X} & \textbf{X} &  &  \\
+P5: Empirical Testing \& Benchmarking &  &  &  &  &  &  & \textbf{X} &  \\
+P6: Manuscript Writing \& Defense &  &  &  &  &  &  &  & \textbf{X} \\
 \bottomrule[1.5pt]
 \end{tabular}
 \end{singlespace}
 \end{table}
 
-As demonstrated in Table \ref{tab:comparison}, the proposed modular architecture achieves superior precision (95.7\%) and F1-score (95.2\%) relative to both baseline models.
-This performance gain is attributable to the decoupling of computational layers, which minimizes pipeline contention and guarantees numerical stability during optimization.
+\section{Proposed Testing and Evaluation Plan}
+\label{sec:testing_plan}
+
+To validate the system's performance against the specific objectives outlined in Section 1.4, a comprehensive empirical evaluation plan is established across four experimental dimensions: layout segmentation accuracy, stamp obstacle avoidance efficacy, execution latency on non-accelerated CPU hardware, and end-to-end turnaround time reduction.
+
+\subsection{Experiment 1: Document Layout Segmentation Benchmark (Objective H)}
+
+Layout analysis performance is evaluated on a held-out test set of 100 Philippine Bidding Document pages spanning native PDFs, clean scans, and degraded photocopies.
+Precision (P), Recall (R), and Mean Average Precision at IoU threshold 0.50 (mAP50) are computed across all four classes:
+
+\begin{equation}
+\label{eq:eval_metrics}
+\text{Precision} = \frac{\text{TP}}{\text{TP} + \text{FP}}, \quad \text{Recall} = \frac{\text{TP}}{\text{TP} + \text{FN}}, \quad \text{mAP@50} = \frac{1}{C} \sum_{c=1}^{C} \text{AP}_c @ 0.50
+\end{equation}
+
+The baseline YOLOv8s model pre-trained on generic DocLayNet is directly compared against the fine-tuned PBD layout model to quantify domain-specific accuracy gains for Philippine procurement instruments.
+
+\subsection{Experiment 2: Stamp Obstacle Avoidance Efficacy (Objective B)}
+
+The dynamic obstacle-free stamp placement engine is tested across 200 heterogeneous pages containing variable margin sizes, dense text paragraphs, low-situated notary jurats, and pre-existing wet-ink signatures.
+The success metric is defined as the percentage of pages achieving Zero-Collision Placement (IoU = 0 against all pre-existing visual elements).
+Cases triggering spatial fallback or manual operator intervention are logged and categorized by failure mode.
+
+\subsection{Experiment 3: Execution Latency \& Resource Utilization (Objective H)}
+
+Per-page processing latency is benchmarked on non-accelerated multi-core CPUs.
+Execution time (in milliseconds) is recorded across individual pipeline stages: (1) JIT Flate stream repair \& WebP rendering, (2) ONNX YOLOv8s layout inference, (3) RapidOCR targeted C-buffer extraction, (4) pre-flight statutory auditing, and (5) Track 1 CTM stamp flattening.
+System memory (RAM) allocation is monitored to verify that peak consumption remains well within commodity 8GB-16GB thresholds.
+
+\subsection{Experiment 4: End-to-End Preparation Turnaround Time (Objective H)}
+
+An end-to-end user study compares manual bidding document collation, manual page numbering, and manual stamping against automated assembly using the proposed local workspace.
+Ten representative procurement dossiers (ranging from 50 to 300 pages) are processed under both paradigms.
+Total preparation time (minutes per dossier) and clerical error rates (e.g., mispaginated pages, occluded signature fields, unverified jurat execution dates) are statistically evaluated using paired t-tests to measure efficiency gains and defect reduction significance.
+
+[Specify the evaluation metrics for layout segmentation (mAP50, precision, recall), stamp placement success rates, execution latency on commodity CPUs, and end-to-end preparation turnaround time.]
