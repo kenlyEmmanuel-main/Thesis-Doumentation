@@ -1,26 +1,323 @@
 \chapter{Review of Related Literature}
 \label{ch:lit_review}
 
+\section{Theoretical Background}
+
+\subsection{Portable Document Format (PDF) and ISO 32000 Object Hierarchy}
+
+The Portable Document Format (PDF) is an internationally standardized, device-independent page description architecture governed by ISO 32000-1:2008 and ISO 32000-2:2020 \cite{ref12, ref13}.
+Rooted in the PostScript imaging model, a PDF document is structurally organized as an acyclic directed graph of eight fundamental object primitives: booleans, numeric scalars, literal/hexadecimal strings, names (/Name), arrays, dictionaries (<< ... >>), streams (stream ... endstream), and the null object \cite{ref12}.
+The file architecture enforces an indirect object referencing mechanism (obj ... endobj) coordinated by a trailing cross-reference (xref) table that indexes the exact byte offsets of every object within the binary stream.
+Document visual hierarchy branches downwards from a root /Catalog dictionary to a /Pages tree, where individual page leaf nodes (/Type /Page) bind physical dimension bounding boxes (/MediaBox, /CropBox), external graphical assets (/Resources), rendering instructions (/Contents), and interactive graphics (/Annots) \cite{ref12, ref13}.
+
+\subsection{Stream Sanitization and Ghostscript Processing (JIT Flate Repair)}
+
+The internal graphics, compressed fonts, and raster images of modern PDF files are encoded as serialized byte streams governed by compression filters such as /FlateDecode, /DCTDecode, and /JBIG2Decode \cite{ref12, ref14}.
+Under RFC 1951, the DEFLATE compression algorithm combines LZ77 dictionary substitution with Huffman entropy coding to achieve lossless byte compression \cite{ref14}.
+However, third-party scanner software, legacy municipal archiving tools, and commercial PDF printers frequently emit malformed stream dictionaries.
+These defects include invalid cross-reference stream byte lengths, corrupted byte-alignment headers, and proprietary permissions-encryption layers that mask standard /FlateDecode streams with non-standard compression parameters (e.g., flate stream error codes 10 and 134) \cite{ref14, ref15}.
+When ingested by standard document parsers, these malformed streams trigger unhandled decompression exceptions.
+PostScript interpreters and stream sanitization engines (such as Ghostscript) resolve these defects by decoding damaged byte sequences, repairing defective cross-reference tables, flushing orphaned pointers, and re-encoding documents into ISO-compliant, linear byte structures \cite{ref15}.
+
+\subsection{Coordinate Transformation Matrix (CTM) and Annotation Flattening}
+
+In digital page description frameworks, spatial positioning and orientation are governed by affine transformations operating in two-dimensional homogeneous coordinates \cite{ref16, ref17}.
+An affine transformation preserves collinearity and spatial ratios, mapping user coordinate space (x, y) to device coordinate space (x', y') via a 3 $\times$ 3 transformation matrix parameterized in PDF syntax as a six-element array [a, b, c, d, e, f]:
+
+\begin{equation}
+\label{eq:affine_ctm}
+\begin{bmatrix} x' & y' & 1 \end{bmatrix} = \begin{bmatrix} x & y & 1 \end{bmatrix} \begin{bmatrix} a & b & 0 \\ c & d & 0 \\ e & f & 1 \end{bmatrix} = \begin{bmatrix} ax + cy + e & bx + dy + f & 1 \end{bmatrix}
+\end{equation}
+
+Under the ISO 32000 specification, visual annotations—including interactive form fields, compliance stamps, and digitized signature overlays—reside in an independent /Annots array separate from the underlying page content stream \cite{ref12}.
+These annotations maintain their own bounding rectangles (/Rect) and normal appearance streams (/AP << /N ... >>).
+Annotation flattening is the formal document transformation process that evaluates the appearance stream through the Current Transformation Matrix (CTM), calculates rotational and translation offsets, and serializes the resulting graphic operators directly into the page's primary /Contents stream while purging the original /Annots dictionary references \cite{ref17}.
+This guarantees that visual endorsements remain permanently visible across legacy viewers and physical print rasterizers.
+
+\subsection{Searchable PDF Architecture (Lamination and Invisible Text Layer)}
+
+A Searchable PDF (frequently termed a "Sandwich PDF" in document engineering) is a dual-layer digital document architecture standardized under ISO 32000-2 (the modern PDF 2.0 specification) \cite{ref18} that combines the visual presentation of an authentic physical scan with a machine-readable digital text layer.
+The architecture encodes the original scanned bitmap as a background image object (/XObject of subtype /Image) in the page's resource dictionary, while overlaying a coordinate-aligned vector text stream within the page's /Contents stream \cite{ref18, ref19}.
+To prevent the extracted vector glyphs from visually obscuring or misaligning with the underlying scanned handwriting and typewritten ink, the text stream is rendered using PDF Text Rendering Mode 3 (3 Tr), which calculates glyph layout and geometric character advances invisibly without painting strokes or fills onto the raster canvas \cite{ref18}.
+This enables programmatic text searchability and bounding-box text querying while preserving 100\% of the authentic scanned bitmap.
+
+\subsection{Optical Character Recognition (OCR)}
+
+Optical Character Recognition (OCR) is a foundational computational discipline within document image analysis and pattern recognition that automates the translation of digitized raster images (bitmaps) into machine-encoded, searchable alphanumeric text streams \cite{ref20}.
+Recent state-of-the-art literature emphasizes that modern OCR pipelines have largely superseded classical structural template-matching and manual heuristic binarization through end-to-end deep representation learning \cite{ref21}.
+Contemporary architectures employ convolutional feature encoders to extract continuous visual spatial representations, paired with recurrent neural networks and connectionist temporal classification (CTC) decoders to model character sequence probabilities directly across horizontal text lines without explicit character-level segmentation \cite{ref20, ref21}.
+
+\subsection{RapidOCR / PP-OCRv3 Architecture and In-Memory Text Recognition}
+
+RapidOCR is a lightweight, high-throughput text detection and recognition framework compiled natively for the Open Neural Network Exchange (ONNX) CPU runtime \cite{ref22}.
+The underlying pipeline decouples text processing into two optimized deep learning stages: text detection via Differentiable Binarization with Adaptive Scale Fusion (DBNet++) \cite{ref23} and text recognition via the Single Visual Model for Text Recognition (SVTR) \cite{ref24}.
+DBNet++ incorporates an adaptive, differentiable thresholding function directly into the neural network’s loss landscape, allowing the model to accurately isolate bounding text polygons along complex, multi-oriented, and low-contrast stroke boundaries in real time \cite{ref23}.
+Detected line proposals are subsequently cropped and normalized into the SVTR recognition network, which utilizes localized patch-based self-attention mechanisms to decode character sequences at high accuracy while avoiding the heavy computational footprint of dense autoregressive sequence decoders \cite{ref24}.
+Operating within shared C-buffers, modern in-memory OCR pipelines eliminate intermediate disk rasterization bottlenecks.
+
+\subsection{Regular Expressions (Regex) and Deterministic Pattern Matching}
+
+A Regular Expression (Regex) is a formalized algebraic notation defined within formal language theory that describes a set of character strings conforming to a specified syntactic pattern \cite{ref25}.
+Rooted in the mathematical foundations of finite-state automata, a regular expression is compiled into a Deterministic Finite Automaton (DFA) that processes an input string of length n in deterministic O(n) linear time \cite{ref25}.
+Recent empirical studies on pattern matching engines confirm that deterministic lexical parsing provides mathematically bounded execution times and predictable resource consumption, making it ideal for safety-critical data pipelines and deterministic compliance extraction where probabilistic language models risk hallucinations \cite{ref25, ref26}.
+
+\subsection{Computer Vision and Document Layout Analysis (DLA)}
+
+Document Layout Analysis (DLA) is a specialized subfield of computer vision and pattern recognition focused on segmenting, categorizing, and interpreting the spatial and structural components of visually rich document images \cite{ref27}.
+Classical DLA frameworks relied predominantly on heuristic spatial decomposition—such as the Run-Length Smearing Algorithm (RLSA), Voronoi tessellation, and recursive X-Y cut algorithms—which infer semantic structure based on rigid geometric assumptions of whitespace distribution and Manhattan layout topologies \cite{ref27}.
+Modern document analysis literature demonstrates that these heuristic approaches deteriorate when applied to visually heterogeneous, degraded, or multi-column commercial documents.
+Consequently, deep convolutional neural networks and visual object detectors have established a new paradigm by treating DLA as a macroscopic visual perception task \cite{ref9}.
+By learning high-level visual representations directly from pixel distributions, deep learning models accurately localize and classify diverse physical document primitives—including body paragraphs, tabular arrays, official seals, and signatures—independent of font variability, scanning distortions, or skew artifacts \cite{ref27, ref9}.
+
+\subsection{Single-Stage Object Detection}
+
+In computer vision, deep object detection frameworks are broadly categorized into two-stage and single-stage detection paradigms \cite{ref28}.
+Two-stage architectures (such as Faster R-CNN) first generate sparse region proposals using an explicit Region Proposal Network (RPN) and subsequently perform bounding-box regression and classification on feature maps pooled from those candidate regions.
+While two-stage detectors historically achieved superior localization precision on dense visual scenes, their multi-step inference pipeline introduces significant computational latency and memory consumption \cite{ref28, ref29}.
+Conversely, single-stage object detectors (such as YOLO and Single Shot MultiBox Detector) reframe object detection as a unified, dense spatial regression problem \cite{ref28, ref29}.
+By mapping input pixels directly to bounding box coordinates and class conditional probabilities across multi-scale feature grids in a single forward pass, single-stage detectors optimize detection throughput, enabling real-time frame rates and sub-second inference on resource-constrained computing hardware \cite{ref28, ref29}.
+
+\subsection{YOLOv8 Architecture and Feature Pyramid Networks}
+
+The YOLOv8 architecture represents a state-of-the-art evolution of single-stage convolutional detection, combining an anchor-free detection head with an optimized Cross Stage Partial Darknet (CSPDarknet) backbone and an enhanced Path Aggregation Network (PANet) neck \cite{ref30, ref31}.
+Traditional anchor-based detectors rely on predefined aspect ratio heuristics, which struggle with extreme scale variations and introduce substantial non-maximum suppression (NMS) overhead.
+In contrast, YOLOv8 implements an anchor-free split head that decouples classification and bounding box regression into separate convolutional branches, predicting objectness and continuous bounding box coordinates directly \cite{ref31}.
+To resolve the challenge of recognizing visual elements across multiple scales, YOLOv8 incorporates Feature Pyramid Networks (FPN) and bottom-up path augmentation \cite{ref30}.
+The feature pyramid constructs multi-scale semantic feature maps through lateral skip connections and top-down pathways, allowing the network to retain high-frequency spatial detail for compact visual entities (such as small notary seals or stamps) while synthesizing rich semantic context for expansive document blocks (such as narrative clauses and tables) \cite{ref30}.
+
+\subsection{Open Neural Network Exchange (ONNX) and CPU Graph Optimization}
+
+The Open Neural Network Exchange (ONNX) is an open-standard format and intermediate representation (IR) designed to facilitate framework-independent interoperability and hardware-optimized execution of deep learning models \cite{ref32}.
+Deep learning architectures trained in high-level research environments (such as PyTorch) often suffer from runtime execution inefficiencies, dynamic graph overhead, and heavy dependency footprints when deployed in production.
+ONNX Runtime addresses these deployment bottlenecks through an optimizing compiler pipeline that applies static graph transformations, including constant folding, redundant node elimination, and horizontal and vertical operator fusion (e.g., fusing Conv-BatchNorm-SiLU kernels into a single contiguous computational operator) \cite{ref32, ref33}.
+Furthermore, ONNX Runtime targets CPU vector instruction sets (such as x86-64 SSE4.2 and AVX-512), transforming dense tensor operations into parallelized Single Instruction, Multiple Data (SIMD) micro-kernels that fully saturate multi-threaded CPU pipelines \cite{ref33}.
+
+\subsection{Dynamic Whitespace Evaluation and Non-Occluding Stamp Placement}
+
+In document finishing and automated preparation workflows, affixing required administrative markings without obscuring underlying text or legal insignia constitutes an essential operational requirement \cite{ref34, ref35}.
+Traditional document preparation utilities rely on static, hardcoded margin coordinates, which routinely trigger fatal visual collisions ('text-stomping') whenever uploaded documents contain non-standard margins, legal jurats, or signatures situated in target corners.
+In contrast, dynamic whitespace evaluation models document elements as spatial obstacles and calculate available rectangular clearance across candidate margins (such as the page's lower-third or fourth quadrant).
+By projecting detected layout boundaries into a spatial clearance field, placement engines search for open whitespace that accommodates the stamp dimensions without intersecting occupied boundaries, dynamically steering annotations into adjacent clear areas to guarantee non-occluding placement \cite{ref34, ref35}.
+
+\subsection{React Framework and Virtual DOM State Architecture}
+
+The React framework is a declarative, component-driven client-side user interface architecture based on unidirectional data flow, immutable state transitions, and Virtual Document Object Model (Virtual DOM) reconciliation \cite{ref36}.
+Traditional imperative document object model (DOM) manipulation mutates browser tree nodes directly, triggering expensive layout recalculations, style invalidations, and browser repaints on every state change.
+React supersedes this through an in-memory structural representation of the UI tree.
+When component state updates occur, a heuristic O(n) tree diffing algorithm (the React reconciliation engine) compares the new virtual DOM tree with the prior snapshot, computing a minimal batch of visual mutation patches applied synchronously to the real browser DOM \cite{ref36}.
+In multi-file document workspaces, memoized component architectures ensure that state modifications re-render only affected component subtrees, eliminating client-side interface lag.
+
+\subsection{Framer Motion Vector Overlays and CSS Hardware Acceleration}
+
+In modern web graphics architectures, declarative vector overlays decouple visual annotations from pixel-buffer canvas elements by rendering interactive elements directly within the browser's hardware-accelerated Document Object Model (DOM) \cite{ref37, ref38}.
+Historically, rich document viewers utilized HTML5 Canvas frameworks (such as Fabric.js) which maintain a single contiguous bitmap raster buffer.
+While flexible for raw graphic creation, large canvas instances suffer from severe V8 heap memory bloat, high CPU overhead during continuous re-rendering, and fatal browser context loss when scaling multi-page document views \cite{ref37}.
+In contrast, rendering vector overlays using Scalable Vector Graphics (SVG) and CSS hardware-accelerated transforms (transform: translate3d(...)) delegates rendering calculations directly to client GPU compositing layers \cite{ref38}.
+When combined with spring-physics motion systems (such as Framer Motion), interactive gestures achieve fluid spatial responsiveness without intermediate buffer re-rasterization.
+
+\subsection{PyMuPDF Server-Side Rasterization and WebP Image Streaming}
+
+Document image streaming architectures decouple complex PDF parsing from client browser runtimes by performing high-throughput vector rasterization on server infrastructure and streaming lightweight, compressed raster bitmaps to client endpoints \cite{ref39, ref40}.
+Traditional web document viewers (such as client-side PDF.js) download full binary PDF files into browser memory, requiring the client's local JavaScript engine to parse cross-reference tables, execute PostScript type-3 font interpreters, and decompress large JBIG2/Flate streams.
+For multi-hundred-megabyte procurement dossiers, this client-heavy paradigm exhausts browser memory limits, causes multi-second rendering delays, and induces page-blanking anomalies.
+Server-side rasterization via high-performance C-libraries (such as MuPDF / PyMuPDF) executes native SIMD-accelerated graphics pipelines that render arbitrary PDF pages into standardized visual bitstreams in under 15 milliseconds \cite{ref40}.
+Encoding these raster pages into the WebP format—which utilizes intra-frame predictive coding from the VP8 video codec—achieves 30\% higher compression efficiency than JPEG while preserving crisp textual legibility \cite{ref39}.
+
+\subsection{Public Key Cryptography and Digital Signatures}
+
+Preserving the legal validity and evidentiary non-repudiation of digitally signed procurement documents represents a paramount requirement in automated document assembly under the Electronic Commerce Act of 2000 (Republic Act No. 8792) and the Rules on Electronic Evidence (A.M. No. 01-7-01-SC) \cite{ref10, ref11}.
+Public Key Infrastructure (PKI) digital signatures rely on cryptographic hash digests encrypted with the private key of an authorized signatory and embedded into the PDF structure alongside validation certificates.
+Any downstream document processing operation that modifies page bytes, serializes visual overlays, flattens annotations, or alters stream cross-references invalidates the underlying cryptographic checksum, destroying the legal signature.
+To reconcile the conflicting demands of visual document standardization and cryptographic signature integrity, a dual-track architectural model processes incoming submissions through two parallel pipelines: a visual assembly pipeline that generates a flattened, page-numbered, and stamped submission package for physical printing, and a concurrent digital packaging pipeline that preserves the original, byte-unaltered source files within an encrypted container for electronic verification.
+
+\subsection{Cryptographic Hash Functions, Tamper-Evident Ledgers, and the SHA-256 Standard}
+
+A cryptographic hash function is a deterministic mathematical mapping that transforms an arbitrary-length binary message string M into a fixed-length hexadecimal digest h = H(M), characterized by three fundamental security guarantees: preimage resistance (infeasibility of determining M given h), second-preimage resistance (infeasibility of finding an alternate M' $\neq$ M such that H(M') = H(M)), and collision resistance (infeasibility of finding any pair yielding identical digests) \cite{ref43}.
+In digital document systems, cryptographic hash functions exhibit the avalanche effect, wherein altering a single bit in the source file induces unpredictable, widespread divergence across the resulting digest \cite{ref43}.
+By sequentially chaining cryptographic hashes across document states, systems construct tamper-evident audit ledgers that provide mathematically verifiable proofs of immutability \cite{ref44}.
+Standardized under NIST FIPS PUB 180-4 \cite{ref43}, the Secure Hash Algorithm-256 (SHA-256) is the mandated cryptographic minimum enforced by the Department of Information and Communications Technology (DICT) within the Philippine National Public Key Infrastructure (PNPKI) Certificate Policy, and serves under the Philippine Supreme Court Rules on Electronic Evidence (A.M. No. 01-7-01-SC) \cite{ref11} as forensic proof to authenticate electronic data and verify that digital files remain byte-for-byte untampered.
+
+\subsection{Dual-Track Document Architecture}
+
+In secure document engineering, dual-track architectures resolve the inherent engineering tension between visual presentation requirements and cryptographic integrity constraints by producing decoupled, dual-purpose digital artifacts from a single source corpus \cite{ref42, ref45}.
+Public procurement and legal evidentiary workflows impose conflicting mandates: visual examination requires uniform page dimensions, sequential pagination, and visible endorsement stamps, whereas evidentiary verification demands untouched binary bytes and valid cryptographic signature chains.
+Decoupling the output pipeline into specialized presentation tracks (A4-normalized, CTM-flattened visual packages for printing and inspection) and evidentiary archive tracks (untouched binary containers with intact PKCS\#7 signatures and SHA-256 verification manifests) reconciles these orthogonal requirements without compromising either standard \cite{ref45}.
+
+\subsection{Statutory Compliance Constraints and Legal Informatics in Public Procurement Systems}
+
+In systems engineering and software specification, statutory frameworks establish the non-negotiable operational boundary conditions, domain taxonomies, and procedural invariants that govern automated workflows.
+In the Republic of the Philippines, public procurement was historically codified under Republic Act No. 9184, the Government Procurement Reform Act (GPRA) of 2003, which standardized Philippine Bidding Documents (PBDs), mandated competitive bidding, and established Bids and Awards Committees (BAC) across all state procuring entities \cite{ref1}.
+On July 20, 2024, the statutory baseline was modernized through Republic Act No. 12009, the New Government Procurement Act (NGPA), repealing RA 9184 to mandate end-to-end electronic procurement and e-bidding through PhilGEPS \cite{ref2}.
+Pursuant to Section 112 of the NGPA Implementing Rules and Regulations, GPPB Circular No. 01-2025 establishes a multi-year phased transition period (2025–2028), authorizing procuring entities to operate in a hybrid administrative state where traditional physical stamped binders and encrypted digital e-bids are concurrently accepted \cite{ref7}.
+Crucially, under Section 30 of RA 9184 and Section 29 of RA 12009, bid evaluation is strictly governed by a non-discretionary "pass/fail" criterion \cite{ref1, ref2, ref46}: the BAC exercises zero clerical discretion, and any missing legal mark, unexecuted notary jurat, or procedural omission results in summary disqualification \cite{ref46}.
+
+\subsection{Digital Evidentiary Preservation, Cryptographic Non-Repudiation, and Edge Data Sovereignty}
+
+The transition toward electronic procurement requires strict adherence to legal informatics standards governing the evidentiary admissibility and cryptographic non-repudiation of electronic documents.
+Under Republic Act No. 8792, the Electronic Commerce Act of 2000, an electronic document satisfies legal originality and admissibility mandates only if its integrity remains demonstrably intact from the time it was generated in final form \cite{ref10}.
+Judicial operationalization through Supreme Court Administrative Matter No. 01-7-01-SC (the Rules on Electronic Evidence) establishes that secure digital signatures backed by Public Key Infrastructure (PKI) asymmetric cryptography enjoy a statutory prima facie presumption of authenticity, whereas unverified digitized bitmap signatures carry zero presumption and require independent affirmative proof of authorization \cite{ref11}.
+Post-facto byte modifications invalidate /ByteRange cryptographic digests, stripping documents of this presumption \cite{ref42, ref11}.
+Concurrently, procurement packages contain extensive commercial trade secrets and sensitive personal information protected under Republic Act No. 10173, the Data Privacy Act of 2012 (DPA), and its Implementing Rules (NPC Circular No. 16-01) \cite{ref6, ref47}.
+The DPA enforces strict controller liability over unauthorized disclosure and third-party data access, dictating that intelligent document processing pipelines must enforce edge data sovereignty through local, on-premise execution to eliminate off-premise cloud data liabilities \cite{ref6, ref47}.
+
 \section{Related Studies}
-The landscape of modern computational engineering has been significantly influenced by modular architectural paradigms and machine learning integrations.
-Researchers have repeatedly emphasized that structuring complex computational pipelines into discrete modules enhances both conceptual clarity and computational throughput.
 
-\subsection{Attention and Transformer Frameworks}
-\citet{vaswani2017attention} demonstrated that self-attention mechanisms eliminate sequential dependencies inherent to recurrent architectures, drastically accelerating training times and contextual feature extraction.
-Subsequent studies expanded upon this foundation by applying multi-head self-attention to multimodal sensor streams, edge devices, and distributed computing nodes.
-These investigations confirmed that attention-driven modularity allows discrete processing components to query relevant context dynamically without requiring monolithic state representations.
+\subsection{Comparative Performance of YOLOv8, YOLOv9, YOLOv10, and YOLOv11 for Layout Analysis of Historical Documents Images}
 
-\subsection{Deep Representation and Optimization Techniques}
-In their foundational treatise on representation learning, \citet{goodfellow2016deep} established that gradient-based optimization in deep computational models requires strict regularized bounds to maintain numerical stability.
-Furthermore, empirical studies on collaborative model training indicate that decoupling gradient calculation from communication routines reduces inter-thread blocking and synchronization latency.
-\citet{kernis1993selfesteem} noted in related contexts that stability across discrete evaluation intervals is a prerequisite for sustained performance, a principle that computational researchers have mapped onto deterministic latency and reliability in software architectures.
+Santos Júnior, Paixão, and Alvarez (2025) evaluated four recent YOLO architectures for detecting the layout of historical newspaper pages, a task in which irregular columns, mixed fonts, and aged scans reduce the reliability of conventional OCR pipelines.
+The authors first created the Brazilian Historical Newspaper (BHN) dataset, consisting of 140 page images from two nineteenth-century periodicals, annotated with Roboflow.
+This dataset was then merged with two existing collections, the GBN dataset (152 pages of German-Brazilian newspapers) and the Printed BlaLet GT dataset (167 pages of a Swiss newspaper).
+The resulting corpus contained 459 images, divided into 321 for training, 69 for validation, and 69 for testing.
+The images originated from sources that differed in resolution (96 to 600 dpi) and quality (gray, bitonal, and RGB), and all were resized to 640 $\times$ 640 pixels.
+The annotated classes were text, image, graphic, and table, with a strongly unbalanced distribution dominated by text (14,333 instances) \cite{ref48}.
 
-\section{Theoretical Framework}
-The theoretical framework underpinning this study combines modular systems theory with convex optimization and empirical risk minimization.
-By defining functional modules as autonomous operators interacting across strict interface contracts, the overall system complexity is bounded to local module domains.
-This abstraction permits independent optimization of mathematical objective functions without propagating unexpected side-effects across the broader execution environment.
+The small variants of the four architectures (YOLOv8s, YOLOv9s, YOLOv10s, and YOLOv11s) were fine-tuned from pretrained weights under identical settings (100 epochs, batch size 16, learning rate 0.01) and compared on the test set using recall, precision, and mAP50.
+YOLOv8 obtained the best result, with a recall of 0.809, a precision of 0.845, and a mAP50 of 0.891.
+YOLOv11 followed closely (0.801, 0.854, and 0.871), whereas YOLOv9 reached a mAP50 of 0.757.
+YOLOv10 attained the highest precision (0.949) but the lowest recall (0.495) and mAP50 (0.692), indicating that it missed a large share of the regions.
+For YOLOv8, the per-class mAP50 was 0.995 for images, 0.911 for text, and 0.768 for graphics, and the weaker graphic result was attributed to the few training instances and the more complex appearance of that class.
+The authors also observed that YOLO models are better suited than transformer-based models to small annotated datasets and that adding pre-processing such as contrast enhancement and noise removal could further reduce errors.
+The test set was small and contained no table instances, so the comparison is indicative.
 
-\section{Synthesis of Related Literature}
-While previous investigations have extensively explored isolated algorithm optimizations \citep{vaswani2017attention, goodfellow2016deep}, existing literature reveals a conspicuous absence of unified architectures that jointly enforce modular decoupling, automated formatting determinism, and institutional guideline compliance.
-Most existing frameworks prioritize throughput at the expense of modular interpretability, or conversely introduce excessive abstraction overhead that penalizes operational latency.
-This study directly bridges that gap by implementing a mathematically rigorous, modular architecture that maintains high precision and throughput while adhering to strict structural and institutional criteria.
+This study supports the selection of YOLOv8 as the detector in the present research.
+YOLOv8 achieved the best balance of recall, precision, and mAP in the comparison while remaining a mature and widely supported architecture, which makes it a middle ground between accuracy, computational cost, and ease of implementation.
+The more recent versions did not show a consistent advantage on document data \cite{ref48}.
+
+The study is also relevant to the condition of the documents in the present study.
+The datasets in the reference work comprised old scanned pages of irregular layout, differing in resolution and image quality, which were normalized to a uniform input size before detection.
+The detector still located and classified the regions with good accuracy.
+This suggests that YOLO can handle documents that are not uniformly proportioned and that are imperfect as scans, and it supports the expectation that bidding documents with skew or reduced clarity can still be analyzed.
+
+\subsection{Performance Evaluation of YOLOv8, YOLOv9, YOLOv10, and YOLOv11 for Stamp Detection in Scanned Documents}
+
+Bento, Paixão, and Alvarez (2025) compared the same four YOLO generations on the specific task of detecting stamps in scanned documents.
+The dataset contained 732 images drawn from the StaVer and DDI-100 collections, with 1,311 annotated stamps of five types, divided into 512 images for training, 110 for validation, and 110 for testing.
+The small variants of each architecture were trained at 640-pixel input size and evaluated using precision, recall, and mAP, together with inference time, parameter count, and computational cost \cite{ref49}.
+
+All four models performed strongly, with differences of only a few points.
+YOLOv9s was the most accurate, with a precision of 97.6\%, a recall of 97.6\%, and a mAP of 98.7\%, but it required 33.1 ms per image against 13.9 ms for YOLOv8s and 13.8 ms for YOLOv11s, and it demanded a considerably longer training time.
+YOLOv8s reached a precision of 95.8\%, a recall of 95.6\%, and a mAP of 97.3\%; YOLOv10s achieved 97.0\%, 93.5\%, and 97.5\%; and YOLOv11s achieved 95.8\%, 91.7\%, and 96.5\%.
+Additional tests on the best model showed that noise was the main cause of failures, whereas a 10$^\circ$ rotation did not prevent the stamps from being detected in the samples examined.
+The authors listed a statistical analysis with confidence intervals as future work, and the hardware used did not make clear whether the reported times refer to GPU or CPU execution, so the timings are best read as relative.
+
+The present research will rely on computer vision to determine the presence and position of marks on documents, such as stamps and signatures.
+Stamp detection is directly comparable to the detection of seals, since both are localized graphical marks printed on top of document content.
+A detector of this kind provides the evidence the checking stage requires, namely whether a required stamp or seal appears on a page and where it is located.
+These locations can also serve as obstacles in the stamp-placement stage, so that an added stamp does not overlap existing marks.
+
+The study additionally supports the choice of YOLOv8.
+Its small variant was close to the most accurate model while being among the fastest, so it offers a favourable balance between accuracy and cost.
+The reference work addresses a single object type, whereas the present study will extend detection to multiple classes, covering signatures, seals, dates, and other structural elements of bidding documents.
+
+\subsection{Enhancing Document Layout Analysis through Diverse Synthetic Data and Adaptive Perception}
+
+Zhao et al. (2024) developed DocLayout-YOLO, an end-to-end computer vision framework designed to overcome the trade-off between the high accuracy of slow multimodal models and the high speed of inaccurate unimodal detectors in Document Layout Analysis (DLA).
+The authors identified that standard unimodal detectors fail across varied documents because existing pre-training datasets are dominated by homogeneous academic papers.
+To solve this, they introduced the Mesh-candidate BestFit algorithm, which treats document generation as a two-dimensional bin-packing problem.
+By cutting real layout elements across 74 categories from the M6Doc dataset and iteratively inserting them into dynamic grid bins to maximize fill rates and alignment, they synthesized DocSynth-300K, a diverse pre-training corpus of 300,000 pages spanning magazines, textbooks, and multi-column formats.
+On the architectural front, the authors modified YOLOv10m by replacing standard convolutional bottlenecks with the Global-to-Local Controllable Receptive Module (GL-CRM).
+This module applies multi-dilation convolutions and learned gating masks across shallow, intermediate, and deep layers to adaptively perceive layout components ranging from single-line headings to full-page tables \cite{ref50}.
+
+The model was pre-trained on DocSynth-300K for 30 epochs and evaluated against public benchmarks and an in-house dataset, DocStructBench, which spans academic, textbook, market analysis, and financial documents.
+DocLayout-YOLO achieved a state-of-the-art mAP of 79.7\% on DocLayNet and 70.3\% on D4LA, outperforming multimodal architectures such as LayoutLMv3 (75.4\% and 60.0\%) and DiT-Cascade-L (72.6\% and 68.2\%).
+At the same time, it maintained an inference speed of 85.5 frames per second on an NVIDIA A100 GPU, operating up to 14.3x faster than DiT-Cascade-L (6.0 FPS) and about 9.5x faster than LayoutLMv3-B (9.0 FPS), on a single A100 GPU.
+The primary limitation of the study is its strict reliance on axis-aligned horizontal bounding boxes and orthogonal grid assumptions.
+The synthesis and detection pipelines do not account for document skew, perspective distortion, or rotated elements, meaning that documents scanned at irregular angles require external geometric correction before layout analysis.
+
+This study provides the theoretical and methodological rationale for the training strategy adopted in the present research.
+While Sugiharto et al. (2023) demonstrated the viability of custom Label Studio annotation, their training corpus was small (153 pages) and drawn from books and journals, and the paper does not state whether pretrained weights were used, which limits conclusions about generalization.
+Zhao et al. (2024) pre-training on DocSynth-300K improved mAP by 1.2 (DLA) and 2.6 (DocLayNet) points over the same detector trained without it.
+Accordingly, the present study adopts a two-stage transfer learning approach: rather than training YOLOv8 from generic natural-image weights (COCO) or from scratch, the detector will be initialized from weights pre-trained on document layouts before being fine-tuned on labeled procurement documents.
+Furthermore, Zhao et al.'s bin-packing approach provides a sound basis for generating synthetic bidding pages using standard procurement templates should real-world training samples prove limited.
+The present study diverges from Zhao et al. by utilizing standard YOLOv8s rather than the modified GL-CRM YOLOv10m backbone, prioritizing lower architectural complexity and ease of local deployment on standard computing hardware, while handling skew through an explicit upstream deskewing module  \cite{ref50}.
+
+\subsection{Unveiling Document Structures with YOLOv5 Layout Detection}
+
+Sugiharto, Silviana, and Nurpazrin (2023) investigated the use of YOLOv5 for detecting the layout of scanned document pages and extracting their content automatically.
+The proposed system is built around a YOLOv5s detector, a single-stage network composed of a CSPDarknet53 backbone for feature extraction, a PANet neck that aggregates features across scales, and an output head that predicts bounding boxes and class labels.
+After the detector localizes the regions of a page, the content is routed according to the predicted class.
+Text and title regions are read using the Tesseract OCR engine, table regions are processed with the PubTables-1M model for structure recognition followed by OCR, and image regions are saved separately.
+The outputs are consolidated into a JSON file containing each component's coordinates, class, and content, ordered by position on the page \cite{ref51}.
+
+The authors did not rely on any pre-existing document dataset.
+Instead, they compiled a corpus of 153 PDF pages converted from books and sample journals and annotated it using Label Studio, drawing bounding boxes around each region of interest.
+The annotation employed seven classes (title, text, image, caption, image\_caption, table, and table\_caption) rather than a single generic label, so that the detector itself identified the type of each region.
+The data was divided into 143 training pages and 10 test pages.
+The model was trained for up to 500 epochs at an input size of 640 pixels, and training was stopped early at epoch 381.
+The reported results were a mAP50 of 0.97, a mAP50-95 of 0.801, a precision of 0.911, and a recall of 0.971.
+The evaluation set is small and drawn from a single type of document, so these results demonstrate feasibility but do not establish broad generalization.
+
+This study serves as the reference for the annotation and training workflow of the detector in the present study.
+The same sequence will be followed: document pages are collected, regions are annotated with bounding boxes in Label Studio, each region is assigned to one of several classes, and a YOLO model (YOLOv8) is trained on the labelled pages and evaluated using mAP, precision, and recall.
+As in Sugiharto et al. (2023), the meaning of each region will be encoded in the detector's class predictions instead of being inferred afterwards \cite{ref51}.
+
+The present study differs in how the detector is prepared.
+Instead of training from scratch on a small self-collected corpus alone—an approach prone to poor generalization on complex layouts—the detector will be initialized from an established model checkpoint pre-trained on DocLayNet (Pfitzmann et al., 2022), a human-annotated collection of 80,863 pages that includes government tenders among its document types.
+This pre-trained checkpoint serves as the baseline, as its convolutional layers have already learned generalized visual representations of page typography, margins, text blocks, titles, tables, and headers.
+Starting from an existing document-layout checkpoint before fine-tuning is consistent with the document-specific pre-training principle reported by Zhao et al. (2024), although their pre-training used a synthetic corpus rather than DocLayNet.
+Whether a DocLayNet-pretrained checkpoint benefits bidding documents is itself tested here by comparing the baseline and fine-tuned models.
+This baseline will then be fine-tuned on actual Philippine Bidding Documents annotated by the researchers in Label Studio.
+The classes for fine-tuning will correspond directly to the domain-specific structures required to verify bid submissions—such as authorized signature blocks, notary seals, and statutory title headers—which generic document benchmarks do not label.
+The documents will be used as they are received, including photocopies and scans with minor noise, so that the detector is trained under practical deployment conditions.
+Comparing the generic baseline directly against the fine-tuned model on the same held-out bidding pages will quantify the specific empirical contribution of the custom fine-tuning stage.
+
+\subsection{Improved OCR quality for smart scanned document management system}
+
+Phan et al. (2020) investigated how preparing a scanned page prior to recognition impacts the accuracy of an OCR engine.
+They observed that scanned documents are frequently skewed due to improper placement on flatbed scanners, which significantly impairs both the recognition accuracy and the processing throughput of downstream character recognition.
+Their pre-processing pipeline comprised three primary components: Hough-based image deskewing, morphological table analysis, and projection-based document layout analysis.
+Deskewing served as the mandatory preliminary stage through which every input page passed.
+
+To perform deskewing, the authors applied the Hough transform to locate dominant text lines, eliminated redundant candidate vectors, estimated the global skew angle, and rotated the bitmap canvas to align the document boundaries orthogonally with the image frame.
+Because rotating an image solely based on line inclination can leave a page inverted, a secondary orientation estimation algorithm adapted from Unnikrishnan and Smith (2009) was used to ensure the page was upright.
+For tabular layouts, morphological dilation operators with horizontal and vertical structuring elements were applied to isolate grid boundaries, inner contours were extracted via Canny edge detection, and adjacent cell vertices were merged using Euclidean distance thresholds before routing isolated cell sub-images to OCR.
+Non-tabular text was partitioned into blocks using the recursive X-Y cut projection profile algorithm.
+The framework was evaluated on 120 scanned Vietnamese administrative government documents (40 containing tables and 80 without tables) using Tesseract 4.0, with performance quantified via Gestalt text similarity and Word Error Rate (WER) against manually verified ground truth.
+
+On the tabular documents, Phan et al. (2020) reported that the mean text similarity score rose from 0.64 ± 0.21 to 0.87 ± 0.09, while the mean WER decreased from 0.46 ± 0.19 to 0.20 ± 0.10, representing an overall 23\% improvement in word accuracy on complex layouts.
+When testing artificial angular rotations across 360$^\circ$, Tesseract’s native internal rotation utility succeeded only within narrow intervals near 0$^\circ$  and 270$^\circ$ ( ±4$^\circ$), whereas the authors' Hough-based routine maintained consistent accuracy across all angles.
+Significantly, the authors identified four persistent failure modes that their classical pre-processing could not resolve: pages containing circular official seals overlapping text, pages exhibiting co-located print and handwritten strokes, scanning noise artifacts, and broken or faint table borders.
+This study is directly relevant to the present research because it evaluates scanned administrative government documents containing tabular schedules and official marks that closely mirror Philippine Bidding Documents (PBDs).
+More importantly, the findings of Phan et al. (2020) empirically delineate the structural limitations of classical heuristic pre-processing and legacy line-based OCR engines.
+Because mandatory procurement instruments—such as the Omnibus Sworn Statement, Bid Securing Declaration, and audited financial statements—routinely contain non-textual legal marks, wet-ink signatures, and dry notary seals situated over body text and table boundaries, the failure cases reported by Phan et al. demonstrate that classical X-Y cut projections, morphological filtering, and Hough line voting break down in the presence of overlapping legal marks and heterogeneous document topologies.
+
+Accordingly, the present research diverges from the methodology of Phan et al. (2020) by replacing fragile heuristic pipelines with deep visual representation learning, in-memory deep OCR, and lossless coordinate transformation mathematics.
+In place of recursive X-Y cuts and morphological table reconstruction, macroscopic layout regions (Signature\_Block, Official\_Seal, Table\_Grid, and Text\_Paragraph) are segmented using a fine-tuned, single-stage YOLOv8 convolutional detector running on ONNX Runtime CPU.
+As demonstrated by Bento et al. (2025), single-stage YOLO detectors remain robust to angular scan rotations up to 10$^\circ$, eliminating the necessity of applying destructive, full-page pixel resampling prior to layout inference \cite{ref49}.
+Furthermore, rather than relying on legacy Tesseract 4.0—whose rigid line-finding mechanism degrades when text rows are slightly inclined—the proposed architecture employs RapidOCR (DBNet++ and SVTR).
+The Differentiable Binarization (DBNet++) detection head natively isolates multi-oriented, arbitrary-angled text polygon proposal strips directly in memory, which are subsequently cropped and normalized for SVTR character recognition without intermediate disk rasterization or full-page bitmap deskewing \cite{ref52}.
+
+Finally, to resolve macro-orientation disparities—such as landscape-oriented financial statements, engineering drawings, and rotated municipal permits—the platform avoids destructive raster rotation altogether.
+Instead, the system leverages the ISO 32000 Coordinate Transformation Matrix (CTM) during Track 1 compilation, applying 3 x 3 affine transformation operators ([a, b, c, d, e, f]) to normalize page geometries to uniform A4 portrait dimensions and permanently bake non-occluding stamps in sub-millisecond execution time on commodity multi-core CPUs.
+Documents exhibiting extreme physical damage or scanning skew exceeding autonomous confidence thresholds are routed to the interactive staging workspace for human-in-the-loop verification, ensuring rigorous compliance without introducing unhandled pipeline exceptions.
+
+\subsection{Information Extraction From Scanned Invoices using Machine Learning, OCR and Spatial Feature Mapping Techniques}
+
+Darsha (2022) developed an end-to-end system for reading scanned invoices and receipts, motivated by the need for an in-house tool that does not transmit customer data to third-party services.
+The architecture comprises four stages.
+First, a YOLOv5s detector localizes text blobs on the page.
+Second, each detected blob is cropped and enhanced through median filtering, sharpening, and enlargement before being read by Tesseract.
+Third, a spatial feature mapping stage divides the page into sections by comparing vertical coordinates against anchor elements, namely the document title, the table header, and the first "total" field, and then forms key-value pairs through regular expressions and a search for the text positioned to the right of each label.
+Finally, the extracted values are composed into an XML document \cite{ref53}
+
+The detector was trained on the SROIE 2019 receipt dataset, which contained 704 images after filtering.
+The author first attempted multi-class training, labelling 40 images with 151 classes.
+This attempt produced near-zero accuracy (a mAP50 of approximately 0.0001), and the author estimated that approximately 700 hours of training would be required to reach useful accuracy on the available hardware, attributing the failure largely to the large number of classes relative to the amount of labelled data.
+The approach was therefore revised to a single class in which every text blob receives the same label.
+Trained for 65 epochs in about three hours, this single-class detector achieved a precision of 0.974, a recall of 0.922, a mAP50 of 0.967, and a mAP50-95 of 0.658, with a reported total inference time of 45.8 ms for a sample image.
+
+The single-class design constitutes the principal limitation of the study.
+Because the detector only indicates that text exists at a given location, all semantic assignment must be performed afterwards through position-based rules and pattern matching, which were written around a single receipt format and, as the author acknowledges, may require adjustment for other layouts.
+In addition, the OCR and key-information extraction stages were not quantitatively evaluated, and the sample output contains recognition errors in some values.
+The adoption of a single class appears to have been a practical compromise under limited annotation time and hardware, not a preferred design \cite{ref53}.
+
+Darsha's work provides the foundational basis for the verification architecture of the proposed system.
+It demonstrates that structured values can be recovered from scanned documents using object detection, targeted OCR, and deterministic rules alone, without any component that interprets the semantics of the text.
+In the proposed system, YOLO will locate and classify the regions of a bidding document, and OCR will be applied only to the isolated bounding boxes from which textual data must be extracted—such as dates and names on statutory execution pages—in place of slow and computationally expensive full-page recognition \cite{ref53}.
+
+The present study differs from the reference work in three key respects.
+First, a multi-class detector will be used instead of a single class, so that the functional identity of each region is carried directly by the detector's class prediction, eliminating the dependence on fragile spatial heuristics and arbitrary coordinate thresholds.
+Second, custom deterministic parameters will be defined specifically for verifying mandatory statutory execution pages—such as the Omnibus Sworn Statement (OSS) and Bid Securing Declaration (BSD)—focusing on the presence, co-location, and completeness of execution dates, jurat notarization dates, authorized signatures, and official notary dry seals.
+Rather than attempting open-ended semantic parsing of all commercial permits across diverse external agencies, the compliance engine evaluates these extracted marks against explicit GPPB procedural rules to verify that required jurats and affidavits are properly executed, directly mitigating procedural disqualification risks under the non-discretionary pass/fail standard.
+Third, the study focuses on complex Philippine Bidding Documents instead of commercial retail receipts.
+While receipts do appear within bid packages (such as proof of purchase for bidding documents), the proposed system handles the broader, multi-layout documentation mandated in public procurement.
