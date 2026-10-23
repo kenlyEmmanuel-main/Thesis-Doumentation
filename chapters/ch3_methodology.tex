@@ -4,177 +4,290 @@
 \section{System Model}
 \label{sec:system_model}
 
-The system is designed as an offline, edge-deployable document processing framework for public procurement workflows.
-It processes heterogeneous, multi-file bidder submissions to generate a compliant, print-ready document package and a parallel digital evidentiary portfolio.
-The architecture consists of nine primary processing components, executed locally on non-accelerated commodity CPU hardware to maintain strict edge data sovereignty under the Data Privacy Act of 2012 (RA 10173).
-Figure 3.1.1 illustrates the structural data flow across these functional layers.
+The system is designed as an offline, edge-deployable document intelligence and compliance verification platform for Philippine public procurement workflows under Republic Act No. 9184 \cite{ref1} and Republic Act No. 12009 \cite{ref2}.
+Operating within an on-premise local server environment (Ubuntu 22.04/24.04 LTS), the platform processes heterogeneous multi-file bidder submissions to generate a unified, compliant, print-ready document package alongside a parallel digital evidentiary portfolio.
+The system architecture enforces a multi-tier local processing pipeline orchestrated via NGINX \cite{ref58} reverse proxy routing, FastAPI \cite{ref54} asynchronous microservices, PostgreSQL \cite{ref55} asset repositories, and client-side single-page applications built on React 19, Tailwind CSS, and Framer Motion.
+Figure~\ref{fig_methodology_3_1_1} illustrates the structural data flow and component layout across the local architecture.
 
 \begin{figure}[htbp]
 \centering
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.1.1: End-to-End System Architecture Diagram}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
-\caption{End-to-End System Architecture Diagram}
+\includegraphics[width=\textwidth]{{figures/Figure 3.1}.png}
+\caption{System Model Block Diagram}
 \label{fig_methodology_3_1_1}
 \end{figure}
 
-\subsection{Component 1: File Ingestion \& Pre-processing Pipeline}
+\subsection{Authentication Perimeter \& Access Control Gate}
+The Authentication Perimeter and Access Control Gate establishes the security boundary regulating user interaction with the local procurement engine.
+Public procurement portfolios contain sensitive commercial proposals, proprietary pricing matrices, and confidential corporate records that require strict role-based isolation under statutory privacy mandates \cite{ref6}.
 
-This component validates, sanitizes, and normalizes input binary documents prior to layout analysis and classification.
+Operating as an asynchronous middleware perimeter within the FastAPI backend (\texttt{authMiddleware.js}) \cite{ref54}, the gate validates user identity through Google Single Sign-On (SSO) OAuth2 token verification and issues 32-byte opaque session tokens (\texttt{crypto.randomBytes(32)}) conforming to RFC 5280 security standards \cite{ref41}.
+Session tokens are stored in encrypted \texttt{HttpOnly}, \texttt{SameSite=Strict}, \texttt{Secure} browser cookies with 30-day sliding expirations.
+To protect bidding data from unauthorized access across shared organizational workstations, the platform enforces a two-tier account authorization model: newly registered user accounts are quarantined in a \texttt{status: 'pending'} state and denied access to protected endpoints (\texttt{403 Forbidden}) until explicitly activated by a designated system administrator.
+Authorized sessions inject verified user and tenant scopes into downstream database operations, guaranteeing complete workspace boundary isolation.
 
-Proposed Component Type: Python-based asynchronous ingestion worker built on PyMuPDF (MuPDF C-engine binding) and Ghostscript wrappers.
+\subsection{User Ingestion Channels (Channel A \& Channel B)}
+The system decouples tender onboarding into two distinct ingestion pathways that separate procedural regulatory requirements from project-specific document payloads:
 
-Input: Multi-file bidding document uploads (native digital PDFs, scanned PDF image streams, JPEG/PNG images) uploaded via the workspace interface.
+\textbf{Channel A (Tender Checklist Ingestion):} Dedicated to ingesting the procuring entity's official Section VIII (Checklist of Technical and Financial Documents) provided in PDF or DOCX format in accordance with standard Philippine Bidding Documents (PBDs) \cite{ref46}.
+Ingesting this document serves as the regulatory context trigger for the entire bidding project, prompting the backend to extract mandatory submission slots.
 
-Core Functions: (1) Performs JIT Flate stream repair on malformed PDF byte headers via PostScript stream sanitization; (2) calculates baseline SHA-256 binary hash digests for incoming source files; (3) executes server-side CTM page geometry normalization to standard A4 portrait dimensions; (4) renders server-side WebP page preview images (at 150 DPI) for interactive client rendering.
+\textbf{Channel B (Project Files Ingestion):} Dedicated to the direct user upload of project-specific, non-recurring instruments---such as the project-titled Bid Form, Bill of Quantities (BOQ), and freshly executed affidavits (Omnibus Sworn Statement and Bid Securing Declaration)---dropping them directly into matching checklist slots within the staging interface \cite{ref12}.
 
-Output: Sanitized binary PDF stream, immutable source byte manifest with SHA-256 hashes, and WebP preview bitstreams.
+\subsection{Checklist Parser \& Matcher Engine}
+The Checklist Parser and Matcher Engine automates the translation of unstructured procurement instructions into machine-readable compliance slots.
+Tender checklists published by government agencies vary across procuring entities but strictly follow the statutory categories mandated by the Government Procurement Policy Board (GPPB) \cite{ref46}.
 
-\subsection{Component 2: Document Layout Segmentation Engine}
+Upon receiving the Channel A document, the parser executes high-speed text extraction via PyMuPDF C-bindings \cite{ref40} and evaluates the textual stream using Deterministic Finite Automaton (DFA) regular expressions rooted in formal language theory \cite{ref25, ref26}.
+The engine compiles statutory anchor patterns to identify standard legal section headings, Class "A" and Class "B" eligibility divisions, and itemized compliance clauses in linear processing time without the computational latency or hallucination risks associated with generative language models \cite{ref25}.
+It constructs a structured JSON representation of the tender's requirements (\texttt{checklist\_state}), assigning a unique slot index, required document category (Legal, Technical, or Financial), and keyword profile to each mandated attachment.
+This structured slot index is immediately forwarded to The Nest to initiate automated asset retrieval.
 
-This component executes deep visual representation learning to localize and classify macroscopic visual primitives across document pages.
+\subsection{The Nest (Company Asset Archive)}
+The Company Asset Archive, designated within the platform as "The Nest," serves as the persistent, local storage subsystem for recurring corporate eligibility credentials.
+In Philippine public procurement, prospective contractors are required to submit identical baseline legal and financial instruments across multiple independent bidding tenders, including local government Mayor's or Business Permits, Bureau of Internal Revenue (BIR) Tax Clearances, Department of Trade and Industry (DTI) or Securities and Exchange Commission (SEC) certificates, and Audited Financial Statements (AFS) \cite{ref1, ref46}.
 
-Proposed Component Type: Single-stage YOLOv8s convolutional object detector fine-tuned on Philippine Bidding Documents, compiled to ONNX format and executed on ONNX Runtime CPU.
+To eliminate repetitive manual searching and redundant disk uploads, The Nest maintains an encrypted local repository organized into multi-tier functional categories (\texttt{Legal/}, \texttt{Technical/}, \texttt{Financial/}, and \texttt{Brochures/}).
+When the Checklist Parser emits required tender slots, the system automatically scans The Nest, performs content-aware token matching against the extracted checklist requirements, and auto-hydrates matching files directly into their designated submission slots in the workspace (\texttt{[\textbackslash{}textbf{Attached from Nest}]}).
+Stored assets are evaluated for expiration dates and validity periods, displaying visual warning badges (\texttt{[\textbackslash{}textbf{WARNING: EXPIRED}]} or \texttt{[\textbackslash{}textbf{WARNING: MISSING}]}) to alert administrative personnel of compliance gaps before project staging proceeds.
+Master files residing in The Nest remain strictly read-only and immutable; all files are encrypted at rest using the AES-256-GCM authenticated cipher standard \cite{ref56} in local PostgreSQL storage \cite{ref55}.
+Project-specific annotations and compliance stamps are staged as isolated session overlays, ensuring that reusable corporate records are never corrupted across tender lifecycles.
 
-Input: Rasterized document page images (640 $\times$ 640 normalized tensors).
+\subsection{The Stamp Album (Digital Seal Catalog)}
+The Stamp Album functions as the centralized repository and configuration catalog for official corporate graphic marks, compliance stamps, and authorized signatory profiles.
+Administrative procurement guidelines mandate that physical copies of submitted bidding portfolios be marked with specific legal endorsements, including "Certified True Copy from Original," "Original Copy No. 1," authorized signatory initials, and project-specific conforme blocks \cite{ref46}.
 
-Core Functions: (1) Performs anchor-free spatial bounding-box regression and classification in a single forward pass; (2) segments page primitives across four target classes: Signature\_Block, Official\_Seal, Table\_Grid, and Text\_Paragraph; (3) outputs spatial bounding box coordinates normalized to user coordinate space.
+Within the platform, the Stamp Album manages these assets through a persistent database model that catalogs graphic files alongside geometric and aesthetic configuration parameters \cite{ref45}.
+Upon image ingestion, an automated background cleanup utility evaluates pixel matrices to strip opaque white backgrounds and convert non-content margins into clean alpha transparency, while strictly preserving original ink color profiles (such as red municipal notarization seals and blue ballpoint signatures) in accordance with empirical stamp detection standards \cite{ref49}.
+Users can configure physical bounding box dimensions ($(w_s, h_s)$), target margin zones, opacity levels, and dynamic date bindings.
+When a compliance stamp is selected during project preparation, its geometric properties are passed directly to the active dodging engine for whitespace evaluation and subsequently to the coordinate transformation pipeline for permanent visual application.
 
-Output: Structured JSON bounding box array containing spatial coordinates [x\_min, y\_min, x\_max, y\_max], class labels, and detection confidence scores per page.
+\subsection{Workspace Archive (Past Bids \& Multi-Stitching)}
+The Workspace Archive provides persistent lifecycle management, state persistence, and compilation history for past and ongoing procurement projects.
+Bidding preparation frequently involves iterative drafting, multi-stage administrative reviews, and the reuse of previously compiled project portfolios \cite{ref45}.
 
-\subsection{Component 3: Targeted In-Memory OCR Engine}
+Implemented on a local relational schema (\texttt{bid\_packages}) within PostgreSQL \cite{ref55}, the Workspace Archive records project metadata (tender title, reference numbers, submission deadlines, and total valuation), directory partitions, and structured JSON state columns tracking document sequencing, active checklist items, and mapped stamp coordinates.
+Users can search historical packages, inspect past submission structures, and initiate one-click re-compilations without re-uploading source files.
+Furthermore, the subsystem incorporates a Multi-Workspace Stitching Engine that allows bidding teams to merge distinct workspace packages (such as independently prepared Technical and Financial component documents) into a single unified master workspace using zero-RAM file copy mechanisms (\texttt{fs.copyFileSync}), preserving existing stamp coordinates and document bindings across combined submission volumes.
 
-This component extracts textual tokens from isolated visual regions without performing computationally expensive full-page optical character recognition.
+\subsection{Document Staging \& Canvas Workspace (Client Presentation Layer)}
+The Document Staging and Canvas Workspace delivers the client-side presentation architecture and document preview pipeline running within the user's web browser via React 19 \cite{ref36}, Tailwind CSS, and Framer Motion \cite{ref38}.
+Traditional browser document interfaces rely on client-side parsing libraries (such as PDF.js) and HTML5 canvas engines (such as Fabric.js), which load entire PDF binaries into browser memory and maintain large contiguous bitmap buffers.
+For 100-page procurement packages exceeding 200 megabytes, this client-heavy architecture exhausts V8 browser memory limits, inducing canvas freezing, font rendering failures, and unrecoverable tab crashes.
 
-Proposed Component Type: RapidOCR framework utilizing DBNet++ (Differentiable Binarization) for text line detection and SVTR (Single Visual Model) for character recognition, running in C-buffer shared memory.
+The system replaces this paradigm through decoupled server-side rasterization and declarative vector overlays:
 
-Input: Cropped image memory buffers derived from bounding box coordinates predicted by Component 2.
+\textbf{Server-Side PyMuPDF Rasterization:} High-performance C-libraries render requested PDF pages on the host workstation using native SIMD-accelerated graphics pipelines \cite{ref40}, streaming lightweight, compressed WebP bitmaps to standard client HTML <img> tags in under 15 milliseconds \cite{ref39}.
+Client memory footprint remains strictly flat at under 80 megabytes regardless of document volume.
 
-Core Functions: (1) Isolates horizontal and multi-oriented text polygon strips; (2) decodes alphanumeric character sequences directly from cropped image tensors; (3) passes extracted text strings to deterministic regular expression parsers to capture statutory keywords, dates, and title headers.
+\textbf{Framer Motion Declarative Vector Overlays:} Compliance stamps, defect inspection bounding boxes, and drag-and-drop handles are rendered directly within the browser's hardware-accelerated Document Object Model (DOM) using CSS transforms (transform: translate3d(...)) and Scalable Vector Graphics \cite{ref37, ref38}.
+Interactive repositioning executes at smooth 60 frames per second through React 19's virtual DOM reconciliation \cite{ref36} without intermediate canvas re-rasterization.
 
-Output: Extracted text key-value map containing execution dates, document title strings, notary jurat details, and header keywords.
+Automated Checklist Sorter \& Staging Grid: Coordinates the slotted attachment grid, displaying auto-hydrated files from The Nest alongside ad-hoc uploads from Channel B, allowing manual drag-and-drop sequencing and document lockout toggles (isSigned = true).
 
-\subsection{Component 4: Document Classification Module}
+\subsection{Nginx Reverse Proxy \& Secure Access Gateway}
+The Nginx Reverse Proxy functions as the front-facing security gateway bridging client browser workspaces with the backend processing runtime \cite{ref58}.
+While the procurement platform and its sensitive document stores reside on an on-premise server to guarantee physical data sovereignty under the Data Privacy Act of 2012 (Republic Act No. 10173) \cite{ref6}, bidding teams often require the flexibility to collaborate across local area networks (LAN) or access the workspace remotely.
 
-This component identifies and categorizes incoming unorganized bidding documents independent of original file naming conventions.
+To secure these interactions, Nginx binds to standard HTTPS Port 443, terminating Transport Layer Security (TLS 1.3) before proxying authorized requests to the internal FastAPI daemon (\texttt{127.0.0.1:8000}).
+It simultaneously delivers the production React 19 single-page application build and caches high-frequency WebP image streams emitted by PyMuPDF \cite{ref39, ref40}.
+This architecture ensures that team members can work remotely with full transport encryption while ensuring that confidential commercial bid amounts, proprietary technical narratives, and administrative credentials remain strictly stored on-premise.
 
-Proposed Component Type: Hybrid multi-modal classification rule engine combining visual layout feature vectors from Component 2 and extracted textual anchors from Component 3.
+\subsection{FastAPI Application Server \& Pipeline Orchestrator}
+The FastAPI Application Server functions as the central asynchronous runtime connecting all client presentation requests, persistent repositories, and backend document processing pipelines \cite{ref54}.
+Operating over the local loopback interface (\texttt{127.0.0.1:8000}) directly behind the Nginx reverse proxy \cite{ref58}, FastAPI provides the high-concurrency API gateway that manages multi-user bidding sessions, document staging uploads, and background execution queues.
 
-Input: Layout bounding box distributions and extracted text metadata.
+Acting as the pipeline orchestrator, the application server coordinates data flow across every platform subsystem: it receives tender payloads from Ingestion Channels A and B \cite{ref12}, routes damaged attachments to the Ghostscript JIT repair engine \cite{ref15}, dispatches clean in-memory PDF streams to the cascaded YOLOv8 \cite{ref29} and RapidOCR \cite{ref22} perception engines, and invokes the Active Dodging engine \cite{ref34} for non-occluding stamp placement.
+Concurrently, it interfaces with PostgreSQL \cite{ref55} to persist workspace states and drives native PyMuPDF C-bindings \cite{ref40} to stream real-time WebP page previews back to the React client \cite{ref36}, ensuring seamless, non-blocking execution across multi-user bidding teams.
 
-Core Functions: (1) Matches structural features and statutory title strings against standard Philippine Bidding Documents (PBD) taxonomies; (2) classifies files into core functional categories (e.g., Omnibus Sworn Statement, Bid Securing Declaration, Mayor's Permit, Tax Clearance, Audited Financial Statements, Technical Specifications).
+\subsection{Pre-Flight Ingestion \& JIT Sanitization Engine (Ghostscript JIT)}
+The Pre-Flight Ingestion and Sanitization Engine provides the crash-resilience boundary that shields downstream layout analysis and compilation pipelines from damaged or permissions-encrypted PDF uploads \cite{ref12}.
+In competitive bidding, prospective contractors routinely attach multi-generation scanned permits, third-party vendor brochures, and legacy copier outputs that contain malformed cross-reference (\texttt{xref}) tables or non-standard compression wrappers, which cause standard parsers to fail mid-process (\texttt{FlateDecode} error codes 10 and 134 under RFC 1951 \cite{ref14}).
 
-Output: Document class assignment metadata and mapped tender checklist category tag.
+The ingestion engine tests incoming byte streams through low-level C-bindings prior to workspace staging \cite{ref12}.
+When structural corruption or permissions-encryption is detected, the file is automatically routed through a sandboxed Ghostscript subprocess (\texttt{gs -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress}) \cite{ref15} that flushes orphaned pointers, recalculates byte offsets, and re-encodes the document into an ISO-compliant, linear byte structure.
+This automated repair ensures that complex bidding packages compile reliably without server crashes or manual intervention.
 
-\subsection{Component 5: Deterministic Statutory Pre-flight Audit Engine}
+\subsection{Stage 1: Deep Visual Perception (YOLOv8-Doc Layout Gatekeeper)}
+The Deep Visual Perception Engine serves as the macroscopic layout analyzer and first stage of the perception pipeline \cite{ref29, ref30}.
+Running on commodity multi-core processors via the ONNX Runtime CPU provider \cite{ref32, ref33}, a customized YOLOv8-Doc convolutional vision model detects four primary semantic layout classes---Signature\_Block, Official\_Seal, Table\_Grid, and Text\_Paragraph \cite{ref49}---in under 35 milliseconds per page without requiring a dedicated graphics accelerator.
 
-This component evaluates document execution pages against statutory requirements derived from RA 12009 and GPPB rules under the non-discretionary pass/fail standard.
+To maximize processing efficiency and eliminate OCR character hallucinations, the engine acts as an architectural pre-filter ahead of text recognition.
+Non-text elements such as official notary dry seals, municipal stamps, and wet signatures bypass the OCR engine entirely and route directly to the Active Dodging obstacle map and statutory affidavit defect verification (confirming co-located signatures and seals on Omnibus Sworn Statements to prevent summary disqualification under RA 9184 \cite{ref1} and RA 12009 \cite{ref2}).
+Only validated text paragraph regions are cropped and forwarded to Stage 2, ensuring downstream lexical recognition operates strictly on clean text blocks.
 
-Proposed Component Type: Deterministic rule-based compliance evaluator operating on spatial layout bounding boxes and extracted text parameters.
+\subsection{Stage 2: Microscopic Text Recognition \& Lamination (RapidOCR)}
+The Text Recognition and Lamination Engine operates as the microscopic second stage of the perception pipeline, performing deep character extraction and document searchability lamination \cite{ref22}.
+Integrating RapidOCR with Differentiable Binarization (DBNet++) for text detection \cite{ref23} and a Single Visual Model for Text Recognition (SVTR) for sequence decoding \cite{ref24}, the engine processes the text crops dispatched by Stage 1 directly within shared C-memory buffers in under 25 milliseconds per page.
 
-Input: Classified document instances, detected visual mark locations (signatures, notary seals), and extracted execution dates.
+By evaluating only isolated text blocks rather than scanning full-page bitmaps, the engine eliminates background noise and reduces processing overhead:
 
-Core Functions: (1) Verifies co-location of Signature\_Block and Official\_Seal primitives on mandatory statutory execution pages (OSS and BSD); (2) evaluates temporal validity of execution dates against tender submission deadlines; (3) verifies template conformance against standard GPPB statutory revisions.
+\textbf{Coordinate Remapping:} Local character coordinates $(x_{\text{local}}, y_{\text{local}})$ are translated back into global page space ($x_{\text{global}} = x_{\text{crop}} + x_{\text{local}}, y_{\text{global}} = y_{\text{crop}} + y_{\text{local}}$), preserving pixel-perfect alignment across the master PDF page.
 
-Output: Structured pre-flight compliance audit log (Pass/Fail/Warning flags) with specific clerical defect explanations.
+\textbf{Searchable PDF Lamination:} Character streams are laminated behind the scanned bitmap under ISO 32000-2 Text Rendering Mode 3 (\texttt{3 Tr}) \cite{ref13, ref18}, granting immediate in-browser searchability and dual-pane checklist verification while retaining 100\% of the authentic visual scan required for BAC bid evaluation.
 
-\subsection{Component 6: Dynamic Non-Occluding Stamp Placement Engine}
+\textbf{Checklist Alignment:} Deterministic finite automaton (DFA) regular expressions evaluate statutory anchor terms (such as permit numbers, execution dates, and statutory headers) in linear time \cite{ref25, ref26} to link attached documents to mandatory Section VIII checklist slots without generative hallucination risks.
 
-This component calculates collision-free placement coordinates for endorsement stamps and pagination marks without obscuring underlying document elements.
+\subsection{Active Dodging Stamp Engine (Dynamic Whitespace Placement)}
+The Active Dodging Stamp Engine automates the non-occluding placement of mandatory compliance stamps, pagination markers, and certification seals \cite{ref34, ref35}.
+In public bidding, affixing official markings over pre-existing legal clauses, authorized signature lines, or notary seals constitutes visual document stomping, which can obscure vital contract terms or invalidate evidentiary records during BAC examination.
 
-Proposed Component Type: Spatial obstacle avoidance and 2D bounding-box clearance algorithm.
+The engine prevents occlusion by evaluating candidate placement zones across statutory margins (such as the page's lower-third or fourth quadrant).
+Using the layout bounding boxes from YOLOv8 and text token coordinates from RapidOCR as occupied obstacle zones, the engine searches for open whitespace valleys that accommodate the stamp's physical dimensions ().
+If a target corner is congested by a notary jurat or signature block, the engine dynamically steers placement to adjacent clear whitespace, guaranteeing 0.0\% visual text occlusion without requiring manual user repositioning.
 
-Input: Target page dimensions, layout bounding box obstacles from Component 2, and required stamp/pagination dimensions.
+\subsection{Dual-Track Compilation \& Packaging (Track 1 \& Track 2)}
+The Dual-Track Compilation and Packaging Engine reconciles the legal requirement for visual presentation with the cryptographic integrity mandated for electronic public procurement \cite{ref42}.
+Modifying a digitally signed PDF---whether to apply page numbers, adjust orientation, or affix compliance marks---mutates its binary structure, permanently breaking its /ByteRange cryptographic digest and destroying its legal validity under Republic Act No. 8792 (Electronic Commerce Act) \cite{ref10} and Supreme Court A.M. No. 01-7-01-SC \cite{ref11}.
 
-Core Functions: (1) Models all detected text blocks, signatures, seals, and tables as spatial obstacles; (2) evaluates 2D whitespace clearance within target margin regions (lower-right quadrant and outer margins); (3) dynamically calculates collision-free affine matrix transformation coordinates for stamp overlays.
+To resolve this paradox, the compilation engine bifurcates output into two decoupled export tracks:
 
-Output: Calculated non-occluding stamp coordinates [x, y, rotation] per page.
+\textbf{Track 1 (Master Print Bidding Document):} An A4-normalized ($595.28 \times 841.89\text{ pt}$), orientation-corrected master PDF \cite{ref12}.
+Interactive annotation appearance streams (\texttt{/AP}) are flattened directly into base content streams (\texttt{/Contents}) using 3x3 Coordinate Transformation Matrices (CTM), producing a unified, pagination-stamped volume ready for physical printing, binding, and sealed envelope submission to the Bids and Awards Committee (BAC).
 
-\subsection{Component 7: Local Interactive Workspace Interface}
+\textbf{Track 2 (Evidentiary Archive Container):} An uncompressed ZIP container holding 100\% untouched original digital PDF attachments with unaltered binary bytes, preserving embedded PKCS\#7 digital signature dictionaries intact \cite{ref41}.
+The container bundles an immutable, cryptographically signed \texttt{manifest.json} audit ledger \cite{ref43, ref44} logging the SHA-256 hash digest of the Track 1 master PDF alongside the individual checksums and page mappings of every source attachment, establishing verifiable provenance for PhilGEPS e-Bidding compliance.
 
-This component provides client-side visual inspection, manual adjustment, and staging capabilities for document operators.
+\subsection{Persistent Database Engine (PostgreSQL)}
+The Persistent Database Engine manages relational state, transaction safety, and tenant data isolation on the on-premise server \cite{ref55}.
+While users can access the application interface across local or remote networks through the encrypted Nginx reverse proxy, all persistent database records and uploaded file assets reside strictly on the internal server storage, satisfying the data sovereignty requirements of Republic Act No. 10173 \cite{ref6}.
 
-Proposed Component Type: React-based single-page application utilizing Virtual DOM state management, Framer Motion vector overlays, and SVG graphic rendering layers.
+Implemented using PostgreSQL \cite{ref55}, the data layer stores user credentials, session state, authorized stamp graphic profiles, and procurement project records.
+To accommodate heterogeneous bidding portfolios without rigid relational schema overhead, workspace packages utilize structured JSON columns to track document sequences, checklist slot attachments, and resolved stamp coordinates.
+This hybrid relational-document architecture allows users to search historical packages and execute one-click re-compilations without re-uploading source files.
 
-Input: WebP page preview streams, bounding box JSON payloads, and pre-flight compliance audit logs.
+\subsection{On-Premise Server Environment (Edge Data Sovereignty)}
+The On-Premise Server Environment establishes the physical execution substrate supporting the entire platform.
+Designed for practical enterprise deployment by bidding contractors, the platform is engineered to run as a self-contained server daemon on standard commodity multi-core computer hardware without requiring expensive cloud virtual machines or dedicated graphics processing units (GPUs).
 
-Core Functions: (1) Renders interactive document staging board with multi-file reordering and drag-and-drop sequencing; (2) displays real-time visual vector overlays of bounding boxes and compliance warnings; (3) allows human-in-the-loop override of automated stamp placements and document sequence order.
+By leveraging native SIMD vector instruction sets to accelerate computer vision and PDF rendering pipelines directly on the CPU \cite{ref33, ref40}, the server environment achieves rapid processing throughput within a lightweight memory footprint.
+Storing all corporate assets in encrypted on-premise directories ensures that confidential pricing models, technical proposals, and trade secrets remain under the contractor's direct physical control, enforcing complete data privacy compliance under Republic Act No. 10173 \cite{ref6} while maintaining reliable system availability.
 
-Output: Operator-verified document sequence assembly list and confirmed stamp placement coordinate state.
+\section{Entity Relationship Diagram}
+\label{sec:erd_data_flow}
 
-\subsection{Component 8: Track 1 Visual Presentation Package Generator}
+The data flow and relational data architecture describes the structural transformations, entity relationships, and data movements across system boundaries, from initial file ingestion through feature extraction, compliance auditing, dynamic spatial stamp placement, and dual-track output generation.
+Operating within an isolated PostgreSQL 16 database \cite{ref55} on the local host workstation, the underlying persistence model adopts a hybrid architecture that balances normalized third normal form (3NF) relational tables with flexible, semi-structured Binary JSON (JSONB) document columns.
+Structured entities with strict transactional boundaries (such as user credentials, active sessions, shared workspaces, and persistent corporate assets) are modeled as normalized relational tables with cascading foreign keys (ON DELETE CASCADE) to eliminate orphaned records.
+Concurrently, high-frequency interactive canvas operations (including real-time stamp repositioning, 50-page sequence reordering, and dynamic checklist matching) are persisted within binary JSONB columns indexed via Generalized Inverted Indexes (GIN) \cite{ref55}.
+This hybrid strategy eliminates the overhead of executing multi-table relational joins or running disruptive table alterations during active tender preparation, ensuring sub-millisecond query responses during interactive document collation across Philippine public procurement packages \cite{ref1, ref46}.
 
-This component compiles the unified, flattened physical submission package for printed bid evaluation.
-
-Proposed Component Type: PyMuPDF PDF stream writer and CTM graphics operator serialization engine.
-
-Input: Sanitized source PDFs, operator-approved sequence order, and confirmed stamp coordinates.
-
-Core Functions: (1) Merges multi-file documents according to statutory tender sequence; (2) serializes visual stamp vector graphics into page /Contents streams via CTM affine transformations; (3) flattens interactive form annotations; (4) bakes dynamic sequential pagination into margin headers/footers.
-
-Output: Single, standardized, CTM-flattened, sequentially paginated, and stamped A4 PDF submission package for physical printing.
-
-\subsection{Component 9: Track 2 Evidentiary Digital Package Generator}
-
-This component builds the tamper-evident digital submission portfolio to preserve PKI digital signatures for electronic bidding under RA 8792.
-
-Proposed Component Type: Cryptographic archiving pipeline and JSON metadata generator.
-
-Input: Unaltered binary source files, SHA-256 baseline hash manifest, pre-flight audit logs, and sequence mapping metadata.
-
-Core Functions: (1) Binds original, byte-unaltered source files without modifying PDF stream dictionaries or invalidating embedded PKCS\#7 digital signature checksums; (2) compiles a cryptographic verification manifest linking source file hashes to sequence order; (3) packages files into an encrypted digital container.
-
-Output: Evidentiary digital package container containing byte-unaltered source files, SHA-256 verification manifest, and audit logs for e-bidding submission.
-
-\section{Data Flow Architecture}
-\label{sec:data_flow}
-
-The data flow architecture describes the transformations and data movements across system boundaries, from initial file ingestion through feature extraction, compliance auditing, dynamic spatial stamp placement, and output generation.
+As shown in Figure~\ref{fig_methodology_3_2_1}, standard relational notation is observed: Primary Keys are explicitly designated by (PK), Foreign Keys by (FK), and unique constraints by (U).
+Table relationships are expressed using standard crow's foot notation, where double vertical crossbars denote a mandatory one-to-one ($1:1$) or one-to-many ($1:N$) parent relationship, and terminal branch forks denote cardinality of many ($1:N$ or $N:M$).
 
 \begin{figure}[htbp]
 \centering
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.2.1: Level 0 and Level 1 Data Flow Diagrams}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
-\caption{Level 0 and Level 1 Data Flow Diagrams}
+\includegraphics[width=\textwidth]{{figures/Figure 3.2}.png}
+\caption{Relational Database Entity-Relationship Diagram (ERD)}
 \label{fig_methodology_3_2_1}
 \end{figure}
+
+\subsection{Users and Authentication Security Schema (users, sessions)}
+The users and sessions tables manage system authentication, user roles, and active logins.
+The users table stores basic profile data with google\_sub and email enforced as unique identifiers, while the sessions table tracks active browser logins using 32-byte cryptographic tokens (token) conforming to RFC 5280 \cite{ref41} with a 30-day expiration (expires\_at).
+This creates a one-to-many relationship (User $\to$ Sessions), where deleting a user automatically cascades (ON DELETE CASCADE) to terminate all active sessions.
+To protect sensitive procurement data, newly registered users are initialized in a quarantined state (status = 'pending'), blocking access until an administrator approves the account (status = 'active') and assigns role privileges (admin or sales).
+
+\subsection{Bid Packages and Tender Workspace Management (bid\_packages)}
+The bid\_packages table serves as the primary workspace record managing the complete lifecycle of a public bidding project.
+It tracks project metadata---including the project name, client procuring entity, approved budget (estimated\_value), submission deadline (bid\_due\_date), and workflow state (status: DRAFT, AUDITED, COMPILED, or ARCHIVED).
+The table establishes foreign key relationships with users through owner\_id (who created the bid) and assigned\_to (an optional secondary reviewer).
+It also maps directly to the on-disk storage directory (upload\_directory), isolating each project's files to prevent cross-contamination while supporting fast dashboard filtering through composite indexes.
+
+\subsection{Semi-Structured JSON State Architecture}
+Rather than splitting dynamic procurement assets across dozens of rigid tables, bid\_packages uses three binary JSON (JSONB) columns to track staging operations.
+The documents\_meta column stores an ordered array of staged attachments, recording sequence numbers, Ghostscript JIT sanitization flags, and YOLOv8-Doc defect verification flags (confirming wet signatures and notary seals on affidavits \cite{ref1, ref46}).
+The stamp\_state column maps canvas coordinates (x,y), rotation, and clearance metrics, confirming a 0.0\% visual text occlusion rate.
+Finally, checklist\_state tracks parsed Section VIII compliance requirements, recording which files were auto-hydrated from The Nest versus items still missing.
+
+\subsection{The Nest Asset Archive (nest\_assets)}
+The nest\_assets table stores recurring corporate eligibility credentials---such as Mayor's Permits, BIR Tax Clearances, and SEC/DTI registrations---that bidders must repeatedly submit across multiple tenders \cite{ref1, ref46}.
+Each record links to the administrative user who uploaded it (registered\_by referencing users.id) and tracks its statutory category (LEGAL, TECHNICAL, FINANCIAL) along with an immutable SHA-256 binary hash (sha256\_hash) \cite{ref43}.
+When a tender checklist is parsed, the system checks nest\_assets; if a matched document has passed its expiry\_date, the system auto-hydrates the file but attaches a visual warning ([\textbf{WARNING: EXPIRED}]), preventing summary disqualification under Section 30 of RA 9184 and RA 12009.
+
+\subsection{The Stamp Album Graphic Catalog (company\_stamps)}
+The company\_stamps table functions as the persistent catalog of official corporate seals, compliance marks, and authorized signatory profiles \cite{ref46}.
+It links to the administrative uploader (uploader\_id referencing users.id) and stores the image path (stamp\_url) alongside default typographical point dimensions (default\_width, default\_height).
+The table enforces an alpha-clearing rule (alpha\_cleared = TRUE), ensuring that background white space is stripped to transparency while preserving authentic ink pigments (such as red notarization seals and blue ballpoint signatures \cite{ref49}) so stamps do not obscure underlying text when placed on document margins.
+
+\subsection{Collaborative Workspace Sharing and Application-Level RLS (workspace\_shares)}
+The workspace\_shares table governs multi-user collaboration and joint-venture tender preparation.
+It acts as a junction table between bid\_packages and users, creating a many-to-many relationship that allows package owners to delegate workspace access to teammates.
+A composite unique constraint on (workspace\_id, user\_id) prevents duplicate access grants.
+The application middleware evaluates this table to enforce Row-Level Security (RLS): access is permitted only if the user is the package owner, an administrator, or possesses an active share record in this table, rejecting all unauthorized requests with HTTP 403 Forbidden to maintain data privacy under RA 10173 \cite{ref6}.
+
+\subsection{Audit Logging \& Cryptographic Manifest Schemas (audit\_logs, compilation\_manifests)}
+The audit\_logs and compilation\_manifests tables provide statutory compliance and cryptographic non-repudiation.
+The audit\_logs table functions as an append-only forensic ledger recording user actions (action: LOGIN, UPLOAD, AUTO\_DODGE, COMPILE), user IDs, IP addresses, and UTC timestamps, fulfilling personal data controller accountability under RA 10173 \cite{ref6}.
+The compilation\_manifests table permanently records compiled package outputs, linking to bid\_packages ($1:1$).
+It stores the master package hash (master\_sha256), individual source file byte-range digests (manifest\_json), and native PKCS\#7 digital signature statuses (pkcs7\_status), ensuring legal admissibility before the Bids and Awards Committee (BAC) under Supreme Court A.M. No. 01-7-01-SC \cite{ref10} and RA 8792 \cite{ref11}.
 
 \section{Program Flowcharts}
 \label{sec:program_flowcharts}
 
-The system's operational logic is divided into specialized processing pipelines governed by deterministic decision rules, automated visual inspection mechanisms, and spatial coordinate transformation routines.
+The operational workflow of the document intelligence framework is structured into five distinct processing pipelines, spanning initial file ingestion, computer vision perception, statutory compliance auditing, dynamic spatial stamp placement, and dual-track output compilation.
+The following subsections detail the algorithmic flow and decision logic governing each pipeline component.
 
 \begin{figure}[htbp]
 \centering
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.3.1: File Ingestion and Pre-processing Flowchart}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\includegraphics[width=0.85\textwidth]{{figures/Figure 3.3.1}.png}
 \caption{File Ingestion and Pre-processing Flowchart}
 \label{fig_methodology_3_3_1}
 \end{figure}
 
+Figure~\ref{fig_methodology_3_3_1} illustrates the initial file ingestion, validation, and pre-processing pipeline.
+Upon receiving multi-file bidder uploads via Channel A or Channel B, the application server immediately computes an immutable SHA-256 cryptographic hash digest for each file to guarantee data integrity.
+Files are subsequently validated through low-level C-bindings; if structural stream corruption or non-standard compression errors (such as FlateDecode error codes 10 or 134) are detected, the byte stream is automatically routed through the Ghostscript JIT repair engine to reconstruct the cross-reference table and re-encode the file into an ISO-compliant PDF structure.
+Once repaired, PyMuPDF evaluates the Coordinate Transformation Matrix (CTM) to normalize page orientation and dimensions to standard A4 portrait specifications, concurrently generating lightweight WebP raster images for client-side workspace preview rendering.
+
 \begin{figure}[htbp]
 \centering
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.3.2: Layout Segmentation and Targeted OCR Flowchart}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\includegraphics[width=0.85\textwidth]{{figures/Figure 3.3.2}.png}
 \caption{Layout Segmentation and Targeted OCR Flowchart}
 \label{fig_methodology_3_3_2}
 \end{figure}
 
+Figure~\ref{fig_methodology_3_3_2} outlines the two-stage visual perception and targeted text recognition workflow.
+In Stage 1, the rendered page image is passed to the ONNX-compiled YOLOv8s layout segmentation model running on CPU execution providers, predicting bounding box coordinates for four key semantic layout classes: Signature\_Block, Official\_Seal, Table\_Grid, and Text\_Paragraph.
+In Stage 2, detected non-text elements (signatures and seals) bypass text recognition and are forwarded directly as obstacle boundaries to the active dodging engine.
+Conversely, detected text paragraph regions are cropped and transferred directly into shared C-memory buffers for RapidOCR processing (combining DBNet++ detection and SVTR character decoding).
+The extracted text tokens are subsequently evaluated using deterministic finite automaton (DFA) regular expressions to extract statutory title headers, execution dates, and checklist anchor keywords.
+
 \begin{figure}[htbp]
 \centering
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.3.3: Pre-flight Statutory Audit \& Classification Flowchart}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\includegraphics[width=0.85\textwidth]{{figures/Figure 3.3.3}.png}
 \caption{Pre-flight Statutory Audit \& Classification Flowchart}
 \label{fig_methodology_3_3_3}
 \end{figure}
 
+Figure~\ref{fig_methodology_3_3_3} depicts the pre-flight statutory compliance audit pipeline.
+Extracted document metadata, layout regions, and textual tokens are evaluated against deterministic statutory rule parameters derived from Republic Act No. 12009 and standard GPPB templates.
+The rule engine verifies mandatory execution requirements on key legal affidavits, such as the Omnibus Sworn Statement (OSS) and Bid Securing Declaration (BSD), by confirming the presence and spatial co-location of authorized signature blocks and notary seals.
+Concurrently, regular expression engines evaluate execution dates against tender opening schedules to flag expired certificates or post-dated jurats.
+Verification flags (Pass, Warning, or Fail) alongside missing requirement logs are structured into a JSON payload and recorded in the audit ledger, rendering real-time compliance feedback within the staging interface.
+
 \begin{figure}[htbp]
 \centering
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.3.4: Dynamic Obstacle-Free Stamp Placement Flowchart}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\includegraphics[width=0.85\textwidth]{{figures/Figure 3.3.4}.png}
 \caption{Dynamic Obstacle-Free Stamp Placement Flowchart}
 \label{fig_methodology_3_3_4}
 \end{figure}
 
+Figure~\ref{fig_methodology_3_3_4} details the dynamic whitespace evaluation and obstacle-avoidance algorithm for non-occluding stamp placement.
+The engine constructs a two-dimensional grid frame across target margin search zones (predominantly the lower-right page quadrant).
+Bounding boxes corresponding to pre-existing text, signatures, seals, and tabular elements are projected onto the grid as occupied obstacle cells.
+The engine then executes a constrained grid search to calculate rectangular clearance for the selected endorsement stamp dimensions, optimizing a scoring function that penalizes obstacle collisions and proximity.
+Upon selecting the candidate coordinates yielding maximum clearance (0.0\% text occlusion), the spatial parameters are mapped via affine transformation matrices to place the stamp graphic cleanly within the page canvas without obscuring critical legal content.
+
 \begin{figure}[htbp]
 \centering
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.3.5: Dual-Track Package Assembly Flowchart}\\\small Architectural blueprint and conceptual diagram.\vspace{1.2cm}}}
+\includegraphics[width=0.85\textwidth]{{figures/Figure 3.3.5}.png}
 \caption{Dual-Track Package Assembly Flowchart}
 \label{fig_methodology_3_3_5}
 \end{figure}
+
+Figure~\ref{fig_methodology_3_3_5} illustrates the dual-track compilation and packaging pipeline that reconciles physical printing standardization with digital cryptographic non-repudiation.
+For Track 1 (Master Print Bidding Document), staged attachments are merged into the statutory Section VIII checklist sequence, page geometries are normalized to A4 portrait, compliance stamp annotations are flattened directly into base content streams using 3x3 CTM transformations, and sequential Bids and Awards Committee (BAC) pagination marks are applied to generate a single print-ready PDF volume.
+For Track 2 (Evidentiary Archive Container), the engine bypasses visual stream transformations entirely, bundling 100\% untouched original source files with their native PKCS\#7 digital signatures intact inside a ZIP archive alongside a cryptographically signed manifest.json audit ledger mapping SHA-256 digests for PhilGEPS e-bidding compliance.
 
 \section{Local Workspace Dashboard and User Interface Design}
 \label{sec:ui_design}
@@ -352,7 +465,7 @@ The optimal non-occluding stamp coordinate (x*, y*) is determined by minimizing 
 (x^*, y^*) = \operatorname*{argmin}_{(x, y) \in \mathcal{M}_{\text{anchor}}} \left[ \alpha \| (x, y) - (x_{\text{pref}}, y_{\text{pref}}) \|^2 + \beta \sum_{i=1}^{n} \frac{1}{d(B_{\text{stamp}}(x, y), B_i) + \epsilon} \right]
 \end{equation}
 
-where d(B\_stamp, B\_i) measures the minimum Euclidean edge-to-edge distance between the candidate stamp box and obstacle B\_i, $\epsilon$ is a small smoothing constant, and $\alpha$, $\beta$ are weighting hyper-parameters prioritizing clearance over anchor proximity.
+where $d(B_{\text{stamp}}, B_i)$ measures the minimum Euclidean edge-to-edge distance between the candidate stamp box and obstacle $B_i$ \cite{ref57}, $\epsilon$ is a small smoothing constant, and $\alpha$, $\beta$ are weighting hyper-parameters prioritizing clearance over anchor proximity.
 
 \subsection{Asset-to-Checklist Matching \& Statutory Arrangement Algorithm}
 
