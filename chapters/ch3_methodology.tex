@@ -9,9 +9,9 @@ Operating within an on-premise local server environment (Ubuntu 22.04/24.04 LTS)
 The system architecture enforces a multi-tier local processing pipeline orchestrated via NGINX \cite{ref58} reverse proxy routing, FastAPI \cite{ref54} asynchronous microservices, PostgreSQL \cite{ref55} asset repositories, and client-side single-page applications built on React 19, Tailwind CSS, and Framer Motion.
 Figure 3.1.1 illustrates the structural data flow and component layout across the local architecture.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{{figures/Figure 3.1}.png}
+\includegraphics[width=0.95\textwidth]{{figures/Figure 3.1}.png}
 \caption*{\textbf{Figure 3.1.1}}
 \label{fig_methodology_3_1_1}
 \end{figure}
@@ -174,9 +174,9 @@ This hybrid strategy eliminates the overhead of executing multi-table relational
 As shown in Figure 3.2.1, standard relational notation is observed: Primary Keys are explicitly designated by (PK), Foreign Keys by (FK), and unique constraints by (U).
 Table relationships are expressed using standard crow's foot notation, where double vertical crossbars denote a mandatory one-to-one ($1:1$) or one-to-many ($1:N$) parent relationship, and terminal branch forks denote cardinality of many ($1:N$ or $N:M$).
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{{figures/Figure 3.2}.png}
+\includegraphics[width=0.95\textwidth]{{figures/Figure 3.2}.png}
 \caption*{\textbf{Figure 3.2.1}}
 \label{fig_methodology_3_2_1}
 \end{figure}
@@ -230,20 +230,27 @@ The following subsections detail the algorithmic flow and decision logic governi
 \subsection{File Ingestion and Pre-processing Flowchart}
 \label{sec:flowchart_ingestion}
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{{figures/Figure 3.3.1}.png}
+\caption*{\textbf{Figure 3.3.1}}
+\label{fig_methodology_3_3_1}
+\end{figure}
+
 Figure 3.3.1 illustrates the initial file ingestion, validation, and pre-processing pipeline.
 Upon receiving multi-file bidder uploads via Channel A or Channel B, the application server immediately computes an immutable SHA-256 cryptographic hash digest for each file to guarantee data integrity.
 Files are subsequently validated through low-level C-bindings; if structural stream corruption or non-standard compression errors (such as FlateDecode error codes 10 or 134) are detected, the byte stream is automatically routed through the Ghostscript JIT repair engine to reconstruct the cross-reference table and re-encode the file into an ISO-compliant PDF structure.
 Once repaired, PyMuPDF evaluates the Coordinate Transformation Matrix (CTM) to normalize page orientation and dimensions to standard A4 portrait specifications, concurrently generating lightweight WebP raster images for client-side workspace preview rendering.
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.85\textwidth]{{figures/Figure 3.3.1}.png}
-\caption*{\textbf{Figure 3.3.1}}
-\label{fig_methodology_3_3_1}
-\end{figure}
-
 \subsection{Layout Segmentation and Targeted OCR Flowchart}
 \label{sec:flowchart_layout_ocr}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{{figures/Figure 3.3.2}.png}
+\caption*{\textbf{Figure 3.3.2}}
+\label{fig_methodology_3_3_2}
+\end{figure}
 
 Figure 3.3.2 outlines the two-stage visual perception and targeted text recognition workflow.
 In Stage 1, the rendered page image is passed to the ONNX-compiled YOLOv8s layout segmentation model running on CPU execution providers, predicting bounding box coordinates for four key semantic layout classes: Signature\_Block, Official\_Seal, Table\_Grid, and Text\_Paragraph.
@@ -251,15 +258,15 @@ In Stage 2, detected non-text elements (signatures and seals) bypass text recogn
 Conversely, detected text paragraph regions are cropped and transferred directly into shared C-memory buffers for RapidOCR processing (combining DBNet++ detection and SVTR character decoding).
 The extracted text tokens are subsequently evaluated using deterministic finite automaton (DFA) regular expressions to extract statutory title headers, execution dates, and checklist anchor keywords.
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.85\textwidth]{{figures/Figure 3.3.2}.png}
-\caption*{\textbf{Figure 3.3.2}}
-\label{fig_methodology_3_3_2}
-\end{figure}
-
 \subsection{Pre-flight Statutory Audit \& Classification Flowchart}
 \label{sec:flowchart_statutory_audit}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{{figures/Figure 3.3.3}.png}
+\caption*{\textbf{Figure 3.3.3}}
+\label{fig_methodology_3_3_3}
+\end{figure}
 
 Figure 3.3.3 depicts the pre-flight statutory compliance audit pipeline.
 Extracted document metadata, layout regions, and textual tokens are evaluated against deterministic statutory rule parameters derived from Republic Act No. 12009 and standard GPPB templates.
@@ -267,15 +274,15 @@ The rule engine verifies mandatory execution requirements on key legal affidavit
 Concurrently, regular expression engines evaluate execution dates against tender opening schedules to flag expired certificates or post-dated jurats.
 Verification flags (Pass, Warning, or Fail) alongside missing requirement logs are structured into a JSON payload and recorded in the audit ledger, rendering real-time compliance feedback within the staging interface.
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.85\textwidth]{{figures/Figure 3.3.3}.png}
-\caption*{\textbf{Figure 3.3.3}}
-\label{fig_methodology_3_3_3}
-\end{figure}
-
 \subsection{Dynamic Obstacle-Free Stamp Placement Flowchart}
 \label{sec:flowchart_stamp_placement}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{{figures/Figure 3.3.4}.png}
+\caption*{\textbf{Figure 3.3.4}}
+\label{fig_methodology_3_3_4}
+\end{figure}
 
 Figure 3.3.4 details the dynamic whitespace evaluation and obstacle-avoidance algorithm for non-occluding stamp placement.
 The engine constructs a two-dimensional grid frame across target margin search zones (predominantly the lower-right page quadrant).
@@ -283,26 +290,19 @@ Bounding boxes corresponding to pre-existing text, signatures, seals, and tabula
 The engine then executes a constrained grid search to calculate rectangular clearance for the selected endorsement stamp dimensions, optimizing a scoring function that penalizes obstacle collisions and proximity.
 Upon selecting the candidate coordinates yielding maximum clearance (0.0\% text occlusion), the spatial parameters are mapped via affine transformation matrices to place the stamp graphic cleanly within the page canvas without obscuring critical legal content.
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.85\textwidth]{{figures/Figure 3.3.4}.png}
-\caption*{\textbf{Figure 3.3.4}}
-\label{fig_methodology_3_3_4}
-\end{figure}
-
 \subsection{Dual-Track Package Assembly Flowchart}
 \label{sec:flowchart_dual_track}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{{figures/Figure 3.3.5}.png}
+\caption*{\textbf{Figure 3.3.5}}
+\label{fig_methodology_3_3_5}
+\end{figure}
 
 Figure 3.3.5 illustrates the dual-track compilation and packaging pipeline that reconciles physical printing standardization with digital cryptographic non-repudiation.
 For Track 1 (Master Print Bidding Document), staged attachments are merged into the statutory Section VIII checklist sequence, page geometries are normalized to A4 portrait, compliance stamp annotations are flattened directly into base content streams using 3x3 CTM transformations, and sequential Bids and Awards Committee (BAC) pagination marks are applied to generate a single print-ready PDF volume.
 For Track 2 (Evidentiary Archive Container), the engine bypasses visual stream transformations entirely, bundling 100\% untouched original source files with their native PKCS\#7 digital signatures intact inside a ZIP archive alongside a cryptographically signed manifest.json audit ledger mapping SHA-256 digests for PhilGEPS e-bidding compliance.
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.85\textwidth]{{figures/Figure 3.3.5}.png}
-\caption*{\textbf{Figure 3.3.5}}
-\label{fig_methodology_3_3_5}
-\end{figure}
 
 \section{Local Workspace Dashboard and User Interface Design}
 \label{sec:ui_design}
@@ -313,9 +313,9 @@ The following subsections detail the interface architecture and layout screens i
 \subsection{File Ingestion \& Upload Workspace Interface}
 \label{sec:ui_ingestion}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.1: File Ingestion \& Upload Workspace Interface}\\\small Multi-file drag-and-drop ingestion panel and upload progress monitor.\vspace{1.2cm}}}
+\fbox{\parbox{0.90\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.1: File Ingestion \& Upload Workspace Interface}\\\small Multi-file drag-and-drop ingestion panel and upload progress monitor.\vspace{1.2cm}}}
 \caption*{\textbf{Figure 3.4.1}}
 \label{fig_methodology_3_4_1}
 \end{figure}
@@ -323,9 +323,9 @@ The following subsections detail the interface architecture and layout screens i
 \subsection{Document Staging \& Reordering Board}
 \label{sec:ui_staging}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.2: Document Staging \& Reordering Board}\\\small Interactive staging board with drag-and-drop document sequence reordering.\vspace{1.2cm}}}
+\fbox{\parbox{0.90\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.2: Document Staging \& Reordering Board}\\\small Interactive staging board with drag-and-drop document sequence reordering.\vspace{1.2cm}}}
 \caption*{\textbf{Figure 3.4.2}}
 \label{fig_methodology_3_4_2}
 \end{figure}
@@ -333,9 +333,9 @@ The following subsections detail the interface architecture and layout screens i
 \subsection{Visual Layout Segmentation Viewer}
 \label{sec:ui_segmentation}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.3: Visual Layout Segmentation Viewer}\\\small Real-time visual layout viewer rendering YOLOv8-Doc bounding box overlays.\vspace{1.2cm}}}
+\fbox{\parbox{0.90\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.3: Visual Layout Segmentation Viewer}\\\small Real-time visual layout viewer rendering YOLOv8-Doc bounding box overlays.\vspace{1.2cm}}}
 \caption*{\textbf{Figure 3.4.3}}
 \label{fig_methodology_3_4_3}
 \end{figure}
@@ -343,9 +343,9 @@ The following subsections detail the interface architecture and layout screens i
 \subsection{Pre-flight Compliance Audit Panel}
 \label{sec:ui_compliance}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.4: Pre-flight Compliance Audit Panel}\\\small Structured compliance audit panel displaying Pass, Warning, and Defect indicators.\vspace{1.2cm}}}
+\fbox{\parbox{0.90\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.4: Pre-flight Compliance Audit Panel}\\\small Structured compliance audit panel displaying Pass, Warning, and Defect indicators.\vspace{1.2cm}}}
 \caption*{\textbf{Figure 3.4.4}}
 \label{fig_methodology_3_4_4}
 \end{figure}
@@ -353,9 +353,9 @@ The following subsections detail the interface architecture and layout screens i
 \subsection{The Nest: Persistent Corporate Asset Vault and Cloud Synchronization}
 \label{sec:ui_nest_vault}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.5: The Nest: Persistent Corporate Asset Vault and Cloud Synchronization}\\\small Corporate asset archive with encrypted local caching and automated checklist hydration.\vspace{1.2cm}}}
+\fbox{\parbox{0.90\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.5: The Nest: Persistent Corporate Asset Vault and Cloud Synchronization}\\\small Corporate asset archive with encrypted local caching and automated checklist hydration.\vspace{1.2cm}}}
 \caption*{\textbf{Figure 3.4.5}}
 \label{fig_methodology_3_4_5}
 \end{figure}
@@ -363,9 +363,9 @@ The following subsections detail the interface architecture and layout screens i
 \subsection{Dual-Track Packaging Export Screen}
 \label{sec:ui_export}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.6: Dual-Track Packaging Export Screen}\\\small Dual-track compilation export screen with print and digital archive downloads.\vspace{1.2cm}}}
+\fbox{\parbox{0.90\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.6: Dual-Track Packaging Export Screen}\\\small Dual-track compilation export screen with print and digital archive downloads.\vspace{1.2cm}}}
 \caption*{\textbf{Figure 3.4.6}}
 \label{fig_methodology_3_4_6}
 \end{figure}
@@ -373,9 +373,9 @@ The following subsections detail the interface architecture and layout screens i
 \subsection{Interactive System Settings \& Configuration Panel}
 \label{sec:ui_settings}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\fbox{\parbox{0.95\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.7: Interactive System Settings \& Configuration Panel}\\\small Workspace configuration panel for stamp parameters, ONNX threads, and audit rules.\vspace{1.2cm}}}
+\fbox{\parbox{0.90\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.7: Interactive System Settings \& Configuration Panel}\\\small Workspace configuration panel for stamp parameters, ONNX threads, and audit rules.\vspace{1.2cm}}}
 \caption*{\textbf{Figure 3.4.7}}
 \label{fig_methodology_3_4_7}
 \end{figure}
@@ -390,7 +390,7 @@ The hardware configuration excludes dedicated Graphics Processing Units (GPUs) a
 
 The local execution environment comprises the hardware specifications detailed in Table 3.5.1.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \caption*{\textbf{Table 3.5.1}}
 \label{tab:hardware_specs}
@@ -413,7 +413,7 @@ Network Topology & Air-Gapped Local Loopback (127.0.0.1) / Isolated Local Area N
 
 The software ecosystem relies on open-source, vendor-neutral execution engines and native C-bindings operating on Linux / Windows Subsystem for Linux (WSL2), summarized in Table 3.5.2.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \caption*{\textbf{Table 3.5.2}}
 \label{tab:software_specs}
@@ -538,7 +538,7 @@ By leveraging open-source computer vision libraries and executing on local commo
 
 Table 3.7.1 details the initial capital expenditures required to establish the edge development environment.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \caption*{\textbf{Table 3.7.1}}
 \label{tab:cost_breakdown}
@@ -590,7 +590,7 @@ Phase 6: Final Manuscript \& Thesis Defense (Month 8): Consolidate empirical ben
 
 Table 3.8.1 summarizes the milestone distribution across the eight-month engineering schedule.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \caption*{\textbf{Table 3.8.1}}
 \label{tab:milestone_schedule}
