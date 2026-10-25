@@ -661,7 +661,7 @@ Table 3.6.1 details the initial capital expenditures required to establish the e
 \caption*{\textbf{Table 3.6.1}}
 \label{tab:capital_expenditure}
 \begin{singlespace}
-\small
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{p{5.5cm}p{3.5cm}ccr}
 \toprule[1.5pt]
 \textbf{Resource Item / Particulars} & \textbf{Link} & \textbf{Quantity} & \textbf{Unit Price} & \textbf{Cost (PHP -- \textpeso)} \\
@@ -674,7 +674,8 @@ Google Cloud OAuth2 Single Sign-On (Developer Tier) & Google Cloud Console & 1 s
 \midrule[1.0pt]
 \multicolumn{4}{l}{\textbf{Total Estimated Capital Expenditure}} & \textbf{\textpeso{}9,400.00} \\
 \bottomrule[1.5pt]
-\end{tabular}
+\end{tabular}%
+}
 \end{singlespace}
 \end{table}
 
@@ -714,7 +715,7 @@ All confidence intervals are two-sided at 95\%, and all hypothesis tests use $\a
 \caption*{\textbf{Table 3.8.1}}
 \label{tab:evaluation_matrix}
 \begin{singlespace}
-\footnotesize
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{cp{3.2cm}p{4.2cm}p{3.8cm}p{3.2cm}}
 \toprule[1.5pt]
 \textbf{Test} & \textbf{Testing Domain} & \textbf{Primary Metrics} & \textbf{Baseline / Reference} & \textbf{Statistical Method} \\
@@ -730,7 +731,8 @@ All confidence intervals are two-sided at 95\%, and all hypothesis tests use $\a
 9 (3.8.10) & End-to-End Turnaround & Turnaround time, minutes per 100 pages, clerical defect rate & Manual assembly & Mixed-effects model; paired $t$-test; Wilcoxon; Cohen's $d_z$ \\
 10 (3.8.11) & Workspace Usability & System Usability Scale (SUS) & Industry benchmark ($\text{SUS} = 68$) & One-sided one-sample $t$-test; Wilcoxon \\
 \bottomrule[1.5pt]
-\end{tabular}
+\end{tabular}%
+}
 \end{singlespace}
 \end{table}
 
