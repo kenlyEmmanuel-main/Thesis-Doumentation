@@ -315,334 +315,582 @@ The following subsections detail the interface architecture and layout screens i
 
 \begin{figure}[H]
 \centering
-\fbox{\parbox{0.90\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.1: File Ingestion \& Upload Workspace Interface}\\\small Multi-file drag-and-drop ingestion panel and upload progress monitor.\vspace{1.2cm}}}
+\includegraphics[width=0.90\textwidth]{{figures/Figure 3.4.1}.png}
 \caption*{\textbf{Figure 3.4.1}}
 \label{fig_methodology_3_4_1}
 \end{figure}
+
+Figure 3.4.1 depicts the primary onboarding view of the workspace, structured around the dual-channel ingestion model defined in Section 3.1.2.
+The interface decouples the procuring entity's regulatory criteria from project-specific bidding assets:
+\begin{enumerate}
+    \item \textbf{Channel A (Tender Checklist Reference):} A dedicated intake panel where the operator uploads the official Bidding Documents Section VIII (\emph{Checklist of Technical and Financial Documents}).
+    Upon receipt, the backend DFA regex parser extracts mandatory checklist slots, displaying a real-time extraction badge and providing a one-click trigger to auto-hydrate corresponding corporate credentials from \emph{The Nest}.
+    \item \textbf{Channel B (Project Bid Enclosures):} A high-surface-area, dashed drag-and-drop dropzone allowing operators to ingest multi-file PDF submissions, scanned affidavits, and multi-page contract bundles directly from local storage, workspace archives, or external cloud storage.
+\end{enumerate}
 
 \subsection{Document Staging \& Reordering Board}
 \label{sec:ui_staging}
 
 \begin{figure}[H]
 \centering
-\fbox{\parbox{0.90\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.2: Document Staging \& Reordering Board}\\\small Interactive staging board with drag-and-drop document sequence reordering.\vspace{1.2cm}}}
+\includegraphics[width=0.90\textwidth]{{figures/Figure 3.4.2}.png}
 \caption*{\textbf{Figure 3.4.2}}
 \label{fig_methodology_3_4_2}
 \end{figure}
 
-\subsection{Visual Layout Segmentation Viewer}
-\label{sec:ui_segmentation}
+Figure 3.4.2 presents the intermediate document organization and staging board.
+Prior to deep visual perception and compliance checking, ingested files are registered as discrete document cards arranged across an interactive staging grid.
+Each card provides metadata summaries including original filename, sanitized file size, detected page count, and an immutable SHA-256 hash digest.
+Operators can dynamically reorder attachments using horizontal drag-and-drop reordering bars, split multi-page bundles, merge complementary annexes, or invoke the \textbf{Magic Auto-Sort} engine to automatically sort documents into statutory sequence order.
+Pre-flight status indicators highlight whether each file was validated through Ghostscript JIT stream sanitization, ensuring corrupted PDF byte structures are resolved before proceeding to layout analysis.
+
+\subsection{Tri-Pane Compliance Checking and Bipartite Inspection Workspace}
+\label{sec:ui_tripane}
 
 \begin{figure}[H]
 \centering
-\fbox{\parbox{0.90\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.3: Visual Layout Segmentation Viewer}\\\small Real-time visual layout viewer rendering YOLOv8-Doc bounding box overlays.\vspace{1.2cm}}}
+\includegraphics[width=0.90\textwidth]{{figures/Figure 3.4.3}.png}
 \caption*{\textbf{Figure 3.4.3}}
 \label{fig_methodology_3_4_3}
 \end{figure}
 
-\subsection{Pre-flight Compliance Audit Panel}
-\label{sec:ui_compliance}
+Figure 3.4.3 illustrates the tri-pane compliance checking and bipartite inspection workspace.
+The interface unifies document tree navigation, visual canvas inspection, and statutory checklist auditing into three synchronized operational panes:
+\begin{enumerate}
+    \item \textbf{Left Navigation Sidebar:} A persistent vertical sidebar displaying the complete set of uploaded document units $U = \{u_1, \dots, u_m\}$ mapped against Section VIII checklist slots $C = \{c_1, \dots, c_k\}$.
+    Visual status badges indicate hydration provenance (\texttt{[Attached from Nest]}), compliance confirmation (\texttt{[COMPLIANT]}), or missing mandatory items (\texttt{[WARNING: MISSING]}).
+    \item \textbf{Center Interactive Canvas Viewport:} A high-resolution document viewport rendering server-side 150 DPI WebP preview streams.
+    The canvas visualizes predicted YOLOv8-Doc bounding box overlays for \texttt{Signature\_Block}, \texttt{Official\_Seal}, \texttt{Table\_Grid}, and \texttt{Text\_Paragraph} primitives.
+    \item \textbf{Right Statutory Pre-Flight Audit Drawer:} A collapsible inspector panel displaying extracted OCR token streams, notary jurat details, commission expiration dates, and rule verification results.
+\end{enumerate}
+
+\subsection{Stamp Placement and Margin Inspection Studio}
+\label{sec:ui_stamp_studio}
 
 \begin{figure}[H]
 \centering
-\fbox{\parbox{0.90\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.4: Pre-flight Compliance Audit Panel}\\\small Structured compliance audit panel displaying Pass, Warning, and Defect indicators.\vspace{1.2cm}}}
+\includegraphics[width=0.90\textwidth]{{figures/Figure 3.4.4}.png}
 \caption*{\textbf{Figure 3.4.4}}
 \label{fig_methodology_3_4_4}
 \end{figure}
+
+Figure 3.4.4 illustrates the dedicated Stamp Placement and Margin Inspection Studio.
+When an operator configures mandatory compliance marks---such as ``Certified True Copy from Original'', authorized signatory initials, or tender conformed blocks---the studio provides real-time visual feedback of candidate placement coordinates.
+The active dodging engine evaluates candidate margin cells across the lower-right page quadrant, projecting obstacle bounding boxes and rendering optimal non-occluding coordinates ($0.0\%$ visual text occlusion).
+Operators can inspect calculated clearance distances $d(i, j)$, adjust safety margins $\delta_p$, toggle stamp opacity, or manually reposition stamp graphic overlays via drag gestures when manual override is desired.
 
 \subsection{The Nest: Persistent Corporate Asset Vault and Cloud Synchronization}
 \label{sec:ui_nest_vault}
 
 \begin{figure}[H]
 \centering
-\fbox{\parbox{0.90\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.5: The Nest: Persistent Corporate Asset Vault and Cloud Synchronization}\\\small Corporate asset archive with encrypted local caching and automated checklist hydration.\vspace{1.2cm}}}
+\includegraphics[width=0.90\textwidth]{{figures/Figure 3.4.5}.png}
 \caption*{\textbf{Figure 3.4.5}}
 \label{fig_methodology_3_4_5}
 \end{figure}
 
-\subsection{Dual-Track Packaging Export Screen}
-\label{sec:ui_export}
+Figure 3.4.5 presents the interface for \emph{The Nest}, the local corporate asset vault dedicated to managing recurring contractor eligibility credentials under Section VIII Class ``A'' requirements \cite{ref1, ref46}.
+The dashboard categorizes stored instruments across Legal, Technical, and Financial directories, archiving Mayor's Permits, BIR Tax Clearances, DTI/SEC registrations, and PhilGEPS Platinum certificates.
+Assets are evaluated against statutory temporal constraints; expired credentials display amber warnings (\texttt{[WARNING: EXPIRED]}), preventing accidental submission of non-compliant certificates.
+The subsystem supports automated Google Drive cloud synchronization, mirroring remote asset vaults while maintaining an encrypted AES-256-GCM local on-premise cache \cite{ref56} to preserve edge operational autonomy during air-gapped bid preparation.
+
+\subsection{Security Perimeter and Multi-User Administration}
+\label{sec:ui_security_admin}
 
 \begin{figure}[H]
 \centering
-\fbox{\parbox{0.90\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.6: Dual-Track Packaging Export Screen}\\\small Dual-track compilation export screen with print and digital archive downloads.\vspace{1.2cm}}}
+\includegraphics[width=0.90\textwidth]{{figures/Figure 3.4.6}.png}
 \caption*{\textbf{Figure 3.4.6}}
 \label{fig_methodology_3_4_6}
 \end{figure}
 
-\subsection{Interactive System Settings \& Configuration Panel}
-\label{sec:ui_settings}
+Figures 3.4.6 and 3.4.7 illustrate the security perimeter and administrative user management views.
+The authentication gateway (Figure 3.4.6) enforces an asynchronous security perimeter via FastAPI middleware, validating credentials against Google Single Sign-On (SSO) OAuth2 protocols.
+Newly authenticated accounts are initialized in a quarantined \texttt{status: 'pending'} state, blocking unauthorized access to proprietary procurement dossiers until account privileges are granted by a designated system administrator.
+
+\subsection{Compilation Console and Cryptographic Audit Ledger Viewer}
+\label{sec:ui_compilation_console}
 
 \begin{figure}[H]
 \centering
-\fbox{\parbox{0.90\textwidth}{\centering\vspace{1.2cm}\textbf{Figure 3.4.7: Interactive System Settings \& Configuration Panel}\\\small Workspace configuration panel for stamp parameters, ONNX threads, and audit rules.\vspace{1.2cm}}}
+\includegraphics[width=0.90\textwidth]{{figures/Figure 3.4.7}.png}
 \caption*{\textbf{Figure 3.4.7}}
 \label{fig_methodology_3_4_7}
 \end{figure}
 
-\section{Physical and Environmental Setup}
-\label{sec:physical_setup}
-
-To guarantee strict edge data sovereignty and eliminate external data liabilities under Republic Act No. 10173 (Data Privacy Act of 2012), the complete intelligent document processing pipeline is deployed and evaluated on a standardized commodity local edge computing workstation.
-The hardware configuration excludes dedicated Graphics Processing Units (GPUs) and external cloud endpoints, benchmarking the system's runtime viability under non-accelerated CPU environments typical of municipal government offices and small contractor premises.
-
-\subsection{Workstation Hardware Specifications}
-
-The local execution environment comprises the hardware specifications detailed in Table 3.5.1.
-
-\begin{table}[H]
-\centering
-\caption*{\textbf{Table 3.5.1}}
-\label{tab:hardware_specs}
-\begin{singlespace}
-\begin{tabular}{p{4.5cm}p{9cm}}
-\toprule[1.5pt]
-\textbf{Hardware Component} & \textbf{Specification \& Architecture Target} \\
-\midrule[1.0pt]
-Central Processing Unit (CPU) & AMD Ryzen 7 5800X / Intel Core i7-12700K (8 Cores / 16 Threads, AVX-512 / AVX2 Instruction Set) \\
-System Memory (RAM) & 32 GB DDR4 / DDR5 Dual-Channel (3200 MHz / 4800 MHz) \\
-Primary Storage & 1 TB NVMe PCIe Gen4 x4 Solid State Drive (Read: 5000 MB/s, Write: 4400 MB/s) \\
-Graphics Accelerator & Integrated / Basic Display Adapter Only (Dedicated CUDA/Tensor Cores Disabled) \\
-Network Topology & Air-Gapped Local Loopback (127.0.0.1) / Isolated Local Area Network \\
-\bottomrule[1.5pt]
-\end{tabular}
-\end{singlespace}
-\end{table}
-
-\subsection{Software Runtimes \& Dependency Stack}
-
-The software ecosystem relies on open-source, vendor-neutral execution engines and native C-bindings operating on Linux / Windows Subsystem for Linux (WSL2), summarized in Table 3.5.2.
-
-\begin{table}[H]
-\centering
-\caption*{\textbf{Table 3.5.2}}
-\label{tab:software_specs}
-\begin{singlespace}
-\begin{tabular}{p{4cm}p{2.5cm}p{7cm}}
-\toprule[1.5pt]
-\textbf{Software / Framework} & \textbf{Version} & \textbf{Operational Purpose} \\
-\midrule[1.0pt]
-Operating System & Ubuntu 22.04 LTS & Host Kernel \& Resource Management \\
-Python Runtime & v3.10.12 & Backend Orchestration \& Pipeline Execution \\
-ONNX Runtime CPU & v1.16.3 & YOLOv8s Layout Segmentation Inference \\
-RapidOCR (PP-OCRv3) & v1.3.2 & Targeted C-Buffer Text Detection \& Recognition \\
-PyMuPDF (MuPDF Binding) & v1.23.8 & PDF Stream Manipulation, CTM Flattening, \& Rasterization \\
-Ghostscript & v9.55.0 & JIT Flate Stream Repair \& PostScript Sanitization \\
-React / Webpack & v18.2.0 & Client-Side Single-Page Application Workspace UI \\
-\bottomrule[1.5pt]
-\end{tabular}
-\end{singlespace}
-\end{table}
+The User Management Panel (Figure 3.4.7) manages role-based access control (RBAC) and tenant delegation across joint-venture bidding teams.
+Administrators can inspect active user sessions, audit workspace sharing grants, and review system audit ledgers.
+The compilation console coordinates the final dual-track synthesis: Track 1 generates the unified, A4-normalized, CTM-flattened master PDF for physical print submission, while Track 2 generates the tamper-evident evidentiary digital package containing byte-unaltered source files and the cryptographically signed \texttt{manifest.json} audit ledger.
 
 \section{Engineering Computations and Mathematical Formulations}
-\label{sec:computations}
+\label{sec:engineering_computations}
 
-This section details the proprietary engineering formulations, geometric transformation matrices, spatial clearance optimization algorithms, and statutory graph-matching models that govern document processing, dual coordinate space alignment, dynamic non-occluding stamp placement, and automated submission arrangement.
+This section defines the custom calculations of the framework: page orientation and A4 normalization, coordinate conversion between detection and page spaces, stamp placement via constrained 2D grid search, and document-to-checklist matching.
+All coordinates are in PostScript points ($1\text{ pt} = 1/72\text{ in}$), with the origin at the top-left corner and the $y$-axis pointing downward unless noted otherwise.
 
 \subsection{Coordinate Transformation Matrices (CTM), Resizing, and Orientation Normalization}
+\label{sec:ctm_normalization}
 
-Document pages ingested from heterogeneous sources exhibit non-standard page dimensions, arbitrary scale variations, and angular orientation offsets.
-The visual compilation pipeline normalizes all incoming page leaf nodes (/Type /Page) to standard ISO 216 A4 portrait dimensions (595.276 pt $\times$ 841.890 pt at 72 points per inch) using two-dimensional homogeneous coordinate transformations.
-
-Let $P_{\text{src}} = (W_{\text{src}}, H_{\text{src}})$ denote the bounding dimensions derived from a page's \texttt{/MediaBox} dictionary, and $P_{\text{target}} = (W_{\text{target}}, H_{\text{target}})$ denote standard A4 user space boundaries ($595.28 \times 841.89$ points at 72 points per inch).
-To preserve original aspect ratio while eliminating margin clipping, isotropic scaling factor $s$ and translation offsets $(t_x, t_y)$ are computed as:
-
+Pages in a bid package arrive in different sizes (US Letter, Legal, Tabloid, ISO A3) and with different orientations.
+Standard Philippine Bidding Documents require a uniform A4 portrait submission ($W_t = 595.276\text{ pt}$, $H_t = 841.890\text{ pt}$).
+Let a source page have raw dimensions $(W, H)$ from its \texttt{/MediaBox} and viewing rotation $\rho \in \{0^\circ, 90^\circ, 180^\circ, 270^\circ\}$ from its \texttt{/Rotate} entry.
+The dimensions of the page as displayed, with the rotation applied, are:
 \begin{equation}
-\label{eq:scaling_factors}
-s = \min\left( \frac{W_{\text{target}}}{W_{\text{src}}}, \frac{H_{\text{target}}}{H_{\text{src}}} \right), \quad t_x = \frac{W_{\text{target}} - s \cdot W_{\text{src}}}{2}, \quad t_y = \frac{H_{\text{target}} - s \cdot H_{\text{src}}}{2}
+\label{eq:disp_dim}
+(W_v, H_v) = \begin{cases} (H, W), & \rho \in \{90^\circ, 270^\circ\} \\ (W, H), & \text{otherwise} \end{cases}
 \end{equation}
 
-To accommodate orientation disparities---such as landscape engineering drawings or inverted municipal permits---the Current Transformation Matrix operator $\mathbf{M}_{\text{norm}}$ combining rotation by angle $\theta \in \{0^\circ, 90^\circ, 180^\circ, 270^\circ\}$, isotropic scaling factor $s$, and translation $(t_x, t_y)$ maps any source coordinate $(x, y)$ to normalized A4 destination space $(x', y')$ according to:
-
+The page is displayed in landscape when its displayed width exceeds its displayed height:
 \begin{equation}
-\label{eq:ctm_rotation}
-\mathbf{M}_{\text{norm}} = \begin{bmatrix}
-s \cos\theta & s \sin\theta & 0 \\
--s \sin\theta & s \cos\theta & 0 \\
-t_x & t_y & 1
-\end{bmatrix}
+\label{eq:landscape_indicator}
+\ell = \mathbf{1}[W_v > H_v] \in \{0, 1\}
+\end{equation}
+For non-square pages this equals the exclusive-or of the two conditions that cause it: $\ell = [\rho \in \{90^\circ, 270^\circ\}] \oplus [W > H]$.
+To keep wide schedules and drawings readable, a displayed landscape page ($\ell = 1$) is turned a quarter-turn counter-clockwise so that it uses the full height of the portrait sheet.
+The dimensions after the turn and before scaling are:
+\begin{equation}
+\label{eq:turned_dim}
+(W_e, H_e) = \begin{cases} (H_v, W_v), & \ell = 1 \\ (W_v, H_v), & \ell = 0 \end{cases}
 \end{equation}
 
-\subsection{Dual Perception Coordinate Space Alignment}
-
-A critical architectural challenge is mapping predicted visual layout bounding boxes from the vision model's pixel raster space (640 $\times$ 640 normalized tensor coordinates) back into the PDF vector graphic coordinate space (72 DPI point units) for accurate CTM stamp projection.
-
-Let $B_{\text{pixel}} = [x_{\min}^{\text{px}}, y_{\min}^{\text{px}}, x_{\max}^{\text{px}}, y_{\max}^{\text{px}}]$ represent a predicted layout bounding box generated by Component 2 on a WebP preview raster image of resolution $W_{\text{img}} \times H_{\text{img}}$ pixels.
-In standard ISO 32000 PDF user coordinate space, the vertical axis origin $(0, 0)$ is situated at the bottom-left corner of the page, whereas raster image space originates at the top-left corner.
-The bidirectional affine transformation mapping a pixel bounding box $B_{\text{pixel}}$ to a PDF user space bounding box $B_{\text{pdf}} = [x_{\text{left}}, y_{\text{bottom}}, x_{\text{right}}, y_{\text{top}}]$ on a target canvas of size $W_{\text{pdf}} \times H_{\text{pdf}}$ points is expressed as:
-
+The scale factor and centering offsets that fit the turned page inside the A4 sheet without distortion are:
 \begin{equation}
-\label{eq:coord_alignment_x}
-x_{\text{left}} = \left( \frac{x_{\min}^{\text{px}}}{W_{\text{img}}} \right) W_{\text{pdf}}, \quad x_{\text{right}} = \left( \frac{x_{\max}^{\text{px}}}{W_{\text{img}}} \right) W_{\text{pdf}}
+\label{eq:scaling_factor}
+s = \min\left( \frac{W_t}{W_e}, \frac{H_t}{H_e} \right)
+\end{equation}
+\begin{equation}
+\label{eq:translation_offsets}
+t_x = \frac{W_t - s W_e}{2}, \quad t_y = \frac{H_t - s H_e}{2}
 \end{equation}
 
+A point $\mathbf{p} = (x, y)$ on the displayed source page is mapped to the A4 sheet by:
 \begin{equation}
-\label{eq:coord_alignment_y}
-y_{\text{top}} = H_{\text{pdf}} - \left( \frac{y_{\min}^{\text{px}}}{H_{\text{img}}} \right) H_{\text{pdf}}, \quad y_{\text{bottom}} = H_{\text{pdf}} - \left( \frac{y_{\max}^{\text{px}}}{H_{\text{img}}} \right) H_{\text{pdf}}
+\label{eq:point_mapping}
+\mathbf{p}' = s \mathbf{Q}_\ell(\mathbf{p}) + \begin{bmatrix} t_x \\ t_y \end{bmatrix}
+\end{equation}
+\begin{equation}
+\label{eq:rotation_operators}
+\mathbf{Q}_0(x, y) = (x, y), \quad \mathbf{Q}_1(x, y) = (y, W_v - x)
+\end{equation}
+$\mathbf{Q}_1$ is a counter-clockwise quarter-turn in the top-left, downward-$y$ convention: the top-left corner $(0, 0)$ maps to $(0, W_v)$, the bottom-left $(0, H_v)$ maps to $(0, 0)$, and the top-right $(W_v, 0)$ maps to $(H_v, W_v)$.
+PDF content streams use a bottom-left origin, so the matrix $[a, b, c, d, e, f]$ written to the stream applies the vertical flip $y \mapsto H_t - y$ on the output coordinates.
+
+\subsection{Bidirectional Coordinate Conversion Between Detection and Page Spaces}
+\label{sec:coordinate_conversion}
+
+The layout detector works on a $640 \times 640$ pixel tensor, while the stamp engine places marks in points on the displayed source page.
+Four spaces arise in the pipeline:
+\begin{enumerate}
+    \item The $640 \times 640$ detector input.
+    \item The $150\text{ DPI}$ preview raster of the displayed source page, rendered by PyMuPDF with the page's \texttt{/Rotate} entry applied.
+    \item The displayed source page in points.
+    \item The A4 sheet.
+\end{enumerate}
+Detecting on the upright displayed preview keeps signatures, seals, and tables in the orientation seen by human reviewers, which matches the training annotations.
+The detector input is the preview scaled to fit the tensor and padded with bars.
+For a preview of $W_{\text{img}} \times H_{\text{img}}$ pixels, the scale and the padding on each side are:
+\begin{equation}
+\label{eq:preview_padding}
+W_{\text{pad}} = 640 - r W_{\text{img}}, \quad H_{\text{pad}} = 640 - r H_{\text{img}}
+\end{equation}
+\begin{equation}
+\label{eq:preview_scale_ratio}
+r = \min\left( \frac{640}{W_{\text{img}}}, \frac{640}{H_{\text{img}}} \right), \quad p_x = \frac{640 - r W_{\text{img}}}{2}, \quad p_y = \frac{640 - r H_{\text{img}}}{2}
+\end{equation}
+For an A4-sized source previewed at $150\text{ DPI}$ ($1240 \times 1754\text{ px}$), $r = 640/1754 \approx 0.3649$, the scaled width is $452\text{ px}$, and the left padding is $p_x = 94\text{ px}$.
+Preview pixels are converted to points on the displayed source page by the resolution ratio:
+\begin{equation}
+\label{eq:pixel_to_points}
+x_{\text{pt}} = x_{\text{img}} \cdot \frac{72}{150}, \quad y_{\text{pt}} = y_{\text{img}} \cdot \frac{72}{150}
+\end{equation}
+PyMuPDF and the raster both start at the top-left, so no vertical flip is needed at this step.
+Finally, points are mapped to the A4 sheet by Equation~(3.5.6).
+
+\subsection{Dynamic Stamp Placement via Constrained 2D Grid Search}
+\label{sec:dynamic_stamp_placement}
+
+Stamp placement is a search over a grid that marks where content already exists.
+The stamp must stay legible and must not cover text paragraphs, signature blocks, seals, or tables, which are the four classes the detector reports.
+All boxes of these classes on the page are treated as obstacles.
+Working Frame. The search is done in the frame in which the reader sees the page upright.
+For $\ell = 0$ this is the A4 portrait sheet, of size $(W_f, H_f) = (W_t, H_t)$.
+For $\ell = 1$ it is the A4 sheet turned back to landscape, of size $(W_f, H_f) = (H_t, W_t)$, and obstacle points are mapped into it by the inverse turn $\mathbf{Q}_1^{-1}(x', y') = (H_t - y', x')$, with box corners re-sorted afterwards.
+
+Grid. The frame is divided into square cells of side $g = 15\text{ pt}$, giving $N_c$ columns and $N_r$ rows:
+\begin{equation}
+\label{eq:grid_dimensions}
+N_c = \left\lfloor \frac{W_f}{g} \right\rfloor, \quad N_r = \left\lfloor \frac{H_f}{g} \right\rfloor
+\end{equation}
+This is $39 \times 56$ for $\ell = 0$ and $56 \times 39$ for $\ell = 1$.
+The endorsement stamp measures $43 \times 18\text{ mm}$ ($121.890 \times 51.024\text{ pt}$) and covers $\nu_c$ columns and $\nu_r$ rows:
+\begin{equation}
+\label{eq:stamp_cell_span}
+\nu_c = \left\lceil \frac{121.890}{g} \right\rceil = 9, \quad \nu_r = \left\lceil \frac{51.024}{g} \right\rceil = 4
 \end{equation}
 
-\subsection{Active Dodging: Dynamic Stamp Obstacle-Avoidance Formulation}
-
-To prevent endorsement stamps and pagination headers/footers from obscuring existing text, signatures, or notary seals, the stamp placement engine models all detected layout regions on page k as a set of 2D spatial obstacle bounding boxes O\_k = {B\_1, B\_2, ..., B\_n}.
-
-Let $S = (w_s, h_s)$ denote the physical dimensions of the stamp to be affixed.
-The search space for valid placements is constrained to designated page margin region $\mathcal{M}_{\text{anchor}} \subseteq \mathbf{R}^2$ (such as the lower-right quadrant).
-A candidate coordinate tuple $(x, y)$ defines a proposed stamp box $B_{\text{stamp}}(x, y) = [x, y, x + w_s, y + h_s]$.
-The non-occluding placement constraint enforces zero spatial intersection across all obstacles in $\mathcal{O}_k$:
-
+Marking occupied cells. Each obstacle box $B_k = [x_k, y_k, w_k, h_k]$ in the working frame is enlarged by a safety margin $\delta_p = 15\text{ pt}$ on every side, and one is added to every grid cell the enlarged box touches, $\mathbf{G}[i][j] \leftarrow \mathbf{G}[i][j] + 1$, for all indices in:
 \begin{equation}
-\label{eq:stamp_collision_constraint}
-\forall B_i \in \mathcal{O}_k, \quad \text{Area}\left( B_{\text{stamp}}(x, y) \cap B_i \right) = 0
+\label{eq:obstacle_dilation}
+B_k' = [x_k - \delta_p, y_k - \delta_p, w_k + 2\delta_p, h_k + 2\delta_p]
+\end{equation}
+\begin{equation}
+\label{eq:row_range}
+i_{\min}^{(k)} = \max\left(0, \left\lfloor \frac{y_k - \delta_p}{g} \right\rfloor\right), \quad i_{\max}^{(k)} = \min\left(N_r - 1, \left\lfloor \frac{y_k + h_k + \delta_p}{g} \right\rfloor\right)
+\end{equation}
+\begin{equation}
+\label{eq:col_range}
+j_{\min}^{(k)} = \max\left(0, \left\lfloor \frac{x_k - \delta_p}{g} \right\rfloor\right), \quad j_{\max}^{(k)} = \min\left(N_c - 1, \left\lfloor \frac{x_k + w_k + \delta_p}{g} \right\rfloor\right)
+\end{equation}
+\begin{equation}
+\label{eq:cell_indices_set}
+\Omega_k = \left\{ (i, j) \in \mathbb{Z}^2 \mid i_{\min}^{(k)} \le i \le i_{\max}^{(k)}, \, j_{\min}^{(k)} \le j \le j_{\max}^{(k)} \right\}
 \end{equation}
 
-The optimal non-occluding stamp coordinate (x*, y*) is determined by minimizing an objective cost function J(x, y) that penalizes proximity to adjacent obstacles while maintaining alignment with the preferred anchor coordinate (x\_pref, y\_pref):
-
+Search region. Endorsements are placed in the lower-right region of the page, which keeps them clear of headers, titles, and the opening clauses of the body.
+This is a design choice carried over from the bid-compilation system that preceded this work, not a rule taken from the procurement regulations.
+The top-left cell $(i, j)$ of a candidate stamp is restricted to:
 \begin{equation}
-\label{eq:stamp_objective_opt}
-(x^*, y^*) = \operatorname*{argmin}_{(x, y) \in \mathcal{M}_{\text{anchor}}} \left[ \alpha \| (x, y) - (x_{\text{pref}}, y_{\text{pref}}) \|^2 + \beta \sum_{i=1}^{n} \frac{1}{d(B_{\text{stamp}}(x, y), B_i) + \epsilon} \right]
+\label{eq:search_region_bounds}
+i \in [\lfloor \zeta_r N_r \rfloor, N_r - \nu_r - 1], \quad j \in [\lfloor \zeta_c N_c \rfloor, N_c - \nu_c - 1]
+\end{equation}
+with $\zeta_r = 0.77$ and $\zeta_c = 0.50$.
+For $\ell = 0$ this gives $i \in [43, 51]$ and $j \in [19, 29]$, which is 99 candidate positions.
+
+Scoring. For each candidate the engine computes the collision count $n(i, j)$, the number of occupied marks under the stamp, and the clearance $d(i, j)$, the distance from the stamp center to the nearest occupied cell:
+\begin{equation}
+\label{eq:clearance_distance}
+d(i, j) = \min_{\{(u, v) : \mathbf{G}[u][v] > 0\}} \sqrt{(u - \bar{i})^2 + (v - \bar{j})^2}, \quad (\bar{i}, \bar{j}) = \left( i + \frac{\nu_r}{2}, j + \frac{\nu_c}{2} \right)
+\end{equation}
+\begin{equation}
+\label{eq:collision_count}
+n(i, j) = \sum_{a=0}^{\nu_r - 1} \sum_{b=0}^{\nu_c - 1} \mathbf{G}[i + a][j + b]
 \end{equation}
 
-where $d(B_{\text{stamp}}, B_i)$ measures the minimum Euclidean edge-to-edge distance between the candidate stamp box and obstacle $B_i$ \cite{ref57}, $\epsilon$ is a small smoothing constant, and $\alpha$, $\beta$ are weighting hyper-parameters prioritizing clearance over anchor proximity.
-
-\subsection{Asset-to-Checklist Matching \& Statutory Arrangement Algorithm}
-
-The statutory compliance rule engine automatically organizes unorganized uploaded files into the mandatory document sequence prescribed by the Bids and Awards Committee (BAC) checklist under Republic Act No. 12009.
-The sequencing logic is formalized as a directed bipartite graph matching problem.
-
-Let $U = \{u_1, u_2, \dots, u_m\}$ denote the set of unorganized uploaded document instances, and $C = \{c_1, c_2, \dots, c_k\}$ represent the ordered list of statutory checklist items required by the Philippine Bidding Documents.
-A match scoring function $S(u_i, c_j) \in [0, 1]$ calculates affinity based on a linear combination of semantic textual similarity and structural visual layout compliance:
-
-A match scoring function S(u\_i, c\_j) $\in$ [0, 1] calculates the likelihood that document u\_i satisfies checklist item c\_j:
-
+If the grid has no occupied cell at all, $d(i, j)$ is set to $\max(N_r, N_c)$.
+The score of a candidate, to be minimized, is:
 \begin{equation}
-\label{eq:checklist_similarity}
-S(u_i, c_j) = w_1 \cdot \text{CosineSimilarity}(f_{\text{textual}}, \text{KeywordSet}(c_j)) + w_2 \cdot \text{LayoutMatch}(f_{\text{visual}}, \text{LayoutTemplate}(c_j))
+\label{eq:objective_cost_function}
+J(i, j) = \lambda n(i, j) + \frac{\mu}{d(i, j) + 1}
 \end{equation}
-
-The global optimal document arrangement permutes set U into sequence $\pi$* that maximizes total checklist alignment while identifying missing mandatory items:
-
+where $\lambda = 10{,}000$ represents an obstacle collision penalty weight and $\mu = 50$ represents a clearance proximity weight \cite{ref57}.
+Ties are broken by distance to the bottom-right corner:
 \begin{equation}
-\label{eq:optimal_permutation}
-\pi^* = \operatorname*{argmax}_{\pi} \sum_{j=1}^{k} S( u_{\pi(j)}, c_j ) \quad \text{subject to} \quad S( u_{\pi(j)}, c_j ) \ge \tau_{\text{threshold}}
+\label{eq:tie_breaking_argmin}
+D_{BR}(i, j) = \sqrt{(N_r - 1 - i)^2 + (N_c - 1 - j)^2}, \quad (i^*, j^*) = \operatorname*{argmin}_{(i, j)} (J(i, j), D_{BR}(i, j))
 \end{equation}
+The two values are compared in that order.
+On a blank page every candidate has $d = \max(N_r, N_c)$, so the candidate closest to the bottom-right corner wins.
+Fallback and output. If $n(i^*, j^*) > 0$, no clean space exists in the region.
+The stamp is placed at the candidate of minimum $n$, and the page is flagged for operator inspection.
+If $n(i^*, j^*) = 0$, the stamp is clean, and the engine outputs the top-left coordinate $(x^*, y^*) = (g \cdot j^*, g \cdot i^*)$ in the working frame.
+Cost. Each candidate sums $\nu_c \times \nu_r = 36$ cells and scans the grid for the clearance, so a page costs on the order of $99 \times 36 \approx 3{,}600$ cell reads, which executes in under 2 milliseconds in memory.
 
-Checklist items c\_j for which max\_{i} S(u\_i, c\_j) < $\tau_{\text{threshold}}$ are automatically flagged as missing mandatory requirements within the pre-flight statutory audit log.
+\subsection{Asset-to-Checklist Matching and Sequence Inversion Verification}
+\label{sec:checklist_matching}
 
-A central architectural objective of this research is eliminating recurring cloud API subscriptions, GPU server hosting fees, and proprietary software licensing costs.
-By leveraging open-source computer vision libraries and executing on local commodity computing hardware, the system minimizes capital and operational expenditure.
+The compliance engine checks that the uploaded documents cover the checklist required by the Bids and Awards Committee (BAC) and reports missing items, extra items, and items out of order.
+Checklist model. Let $U = \{u_1, \dots, u_m\}$ be the uploaded document units, where a unit is a whole file or, when one file bundles several items, the page range that Component 4 assigns to one item.
+Let $\mathcal{C} = \{c_1, \dots, c_k\}$ be the ordered checklist, where each requirement is the tuple:
+\begin{equation}
+\label{eq:checklist_tuple}
+c_j = (\text{Title}_j, \mathcal{K}_j, \mathcal{Y}_j, M_j, n_j)
+\end{equation}
+$\text{Title}_j$ is the official title.
+$\mathcal{K}_j$ is a set of required keywords.
+$\mathcal{Y}_j$ is the set of layout classes the document must contain (such as signatures and seals for affidavits).
+$M_j \in \{0, 1\}$ marks whether the entry is mandatory, and $n_j \ge 1$ is the expected number of documents for that entry.
+Most entries have $n_j = 1$.
+The entry for ongoing projects is the exception: its $n_j$ is the number of contracts the bidder claims.
+
+Match score. A document $u_i$ is compared with a requirement $c_j$ through a score in $[0, 1]$ that combines title similarity, keyword coverage, and layout conformity:
+\begin{equation}
+\label{eq:match_score_combination}
+S(u_i, c_j) = w_1 \cdot T_{ij} + w_2 \cdot K_{ij} + w_3 \cdot Y_{ij}, \quad w_1 + w_2 + w_3 = 1, \quad w_1, w_2, w_3 \ge 0
+\end{equation}
+\begin{equation}
+\label{eq:weights_constraint}
+w_1 + w_2 + w_3 = 1, \quad w_1, w_2, w_3 \ge 0
+\end{equation}
+\begin{equation}
+\label{eq:title_levenshtein}
+T_{ij} = 1 - \frac{\text{Lev}(t_i, \text{Title}_j)}{\max(|t_i|, |\text{Title}_j|)}
+\end{equation}
+\begin{equation}
+\label{eq:keyword_coverage}
+K_{ij} = \frac{1}{|\mathcal{K}_j|} \sum_{w \in \mathcal{K}_j} \mathbf{1}\left[ \max_{v \in V_i} \text{Sim}(w, v) \ge \theta_k \right]
+\end{equation}
+$Y_{ij} = |\mathcal{Y}_j \cap \mathcal{D}_i| / |\mathcal{Y}_j|$.
+$T_{ij}$ is the normalized Levenshtein similarity between the OCR header string $t_i$ of $u_i$ and the official title.
+$K_{ij}$ is the share of required keywords that appear in the OCR tokens $V_i$ of $u_i$; $\text{Sim}$ is the normalized Levenshtein similarity, and $\theta_k = 0.85$ allows for OCR character errors.
+$Y_{ij}$ is the share of required layout classes that the detector found in $u_i$ (the set $\mathcal{D}_i$), with $Y_{ij} = 1$ if $\mathcal{Y}_j$ is empty.
+
+Assignment. Each document may fill at most one slot and each slot at most one document, so two similar uploads do not collapse into the same requirement.
+Entry $c_j$ provides $n_j$ identical slots $(j, 1), \dots, (j, n_j)$.
+The engine sets an acceptance threshold $\tau = 0.60$ and runs the Hungarian algorithm on the bipartite graph between $U$ and the slots:
+\begin{equation}
+\label{eq:hungarian_assignment}
+\tilde{S}_{i, (j, r)} = \begin{cases} S(u_i, c_j), & S(u_i, c_j) \ge \tau \\ 0, & \text{otherwise} \end{cases}, \quad A^* = \operatorname*{argmax}_A \sum_{(i, \sigma) \in A} \tilde{S}_{i, \sigma}
+\end{equation}
+The maximum runs over all sets $A \subseteq U \times \mathcal{S}$ in which no document and no slot appears twice.
+This is a maximum-weight bipartite matching solved in polynomial time $\mathcal{O}((|U| + |\mathcal{S}|)^3)$.
+A slot of an entry with $M_j = 1$ that has no accepted pair is logged as a Missing Document Defect.
+An uploaded document with no accepted pair is logged as an extraneous submission.
+An accepted pair $(u_a, \text{slot})$ for entry $c_j$ is flagged for operator review if the best other document score is close: $\max_{b \neq a} S(u_b, c_j) \ge S(u_a, c_j) - 0.10$.
+
+Order verification. Documents matched to the same entry are interchangeable, so they are assigned to that entry's slots in upload order and are not counted as out of order among themselves.
+Let $A$ be the accepted pairs, $m_a = |A|$, and $Q = (q_1, \dots, q_{m_a})$ the prescribed positions of the accepted documents listed in the order in which they were uploaded.
+Two measures describe how far $Q$ is from sorted:
+\begin{equation}
+\label{eq:order_verification_metrics}
+\text{Inv}(Q) = |\{ (a, b) : a < b \wedge q_a > q_b \}|, \quad \text{Moves}(Q) = m_a - \text{LIS}(Q)
+\end{equation}
+$\text{Inv}(Q)$ is the number of inversions, the number of pairs that must be swapped to sort $Q$.
+$\text{LIS}(Q)$ is the length of the longest strictly increasing subsequence of $Q$, so $\text{Moves}(Q)$ is the minimum number of elements that must be moved to make the sequence increasing.
+An interface alert is raised whenever $\text{Inv}(Q) > 0$.
 
 \section{Cost Breakdown and Expenditure}
 \label{sec:cost_breakdown}
 
-\subsection{Development and Hardware Expenditure}
+\subsection{Development \& Hardware Expenditure}
+\label{sec:dev_expenditure}
 
-Table 3.7.1 details the initial capital expenditures required to establish the edge development environment.
+Table 3.6.1 details the initial capital expenditures required to establish the edge development environment.
 
 \begin{table}[H]
 \centering
-\caption*{\textbf{Table 3.7.1}}
-\label{tab:cost_breakdown}
+\caption*{\textbf{Table 3.6.1}}
+\label{tab:capital_expenditure}
 \begin{singlespace}
-\begin{tabular}{p{7.5cm}p{3cm}p{3cm}}
+\small
+\begin{tabular}{p{5.5cm}p{3.5cm}ccr}
 \toprule[1.5pt]
-\textbf{Resource Item / Particulars} & \textbf{Cost (PHP -- \textpeso)} & \textbf{Cost (USD -- \$)} \\
+\textbf{Resource Item / Particulars} & \textbf{Link} & \textbf{Quantity} & \textbf{Unit Price} & \textbf{Cost (PHP -- \textpeso)} \\
 \midrule[1.0pt]
-Commodity Edge Workstation (Ryzen 7, 32GB RAM, 1TB SSD) & ₱45,000.00 & \$800.00 \\
-High-Speed Document Flatbed/Sheetfed Scanner & ₱12,500.00 & \$220.00 \\
-Domain Benchmark Dataset Acquisition \& Printing & ₱3,500.00 & \$62.00 \\
-Software Licenses (PyMuPDF, RapidOCR, ONNX, React) & ₱0.00 (Open Source) & \$0.00 (Open Source) \\
-Uninterruptible Power Supply (UPS 1200VA) & ₱4,800.00 & \$85.00 \\
+Vultr Cloud Compute (Regular 4vCPU, 8GB RAM, 160GB SSD, Manila Node) & \url{https://www.vultr.com/pricing/} & 3 months & \textpeso{}2,250.00 & \textpeso{}6,750.00 \\
+Printing Logistics (Testing Paper \& High-Yield Ink Consumables) & Office Procurement & 1 & \textpeso{}2,000.00 & \textpeso{}2,000.00 \\
+Physical Backup Storage (128GB High-Speed Flash Drive) & \url{https://shopee.ph/sandiskofficialstore} & 1 pc & \textpeso{}650.00 & \textpeso{}650.00 \\
+Open-Source Runtimes (Ubuntu Linux, FastAPI, PostgreSQL, Ghostscript) & Open Source Stack & 1 stack & \textpeso{}0.00 & \textpeso{}0.00 \\
+Google Cloud OAuth2 Single Sign-On (Developer Tier) & Google Cloud Console & 1 stack & \textpeso{}0.00 & \textpeso{}0.00 \\
 \midrule[1.0pt]
-\textbf{Total Estimated Capital Expenditure} & \textbf{₱65,800.00} & \textbf{\$1,167.00} \\
+\multicolumn{4}{l}{\textbf{Total Estimated Capital Expenditure}} & \textbf{\textpeso{}9,400.00} \\
 \bottomrule[1.5pt]
 \end{tabular}
 \end{singlespace}
 \end{table}
 
-\subsection{Operational and Comparative Cost Model}
+The total estimated expenditure reflects the initial capital requirements for hosting, training, and benchmarking the system without commercial third-party API dependencies.
 
-Compared to commercial cloud IDP providers (charging ~\textdollar 0.05 to \textdollar 0.10 per page for multimodal AI extraction and document OCR), processing a 500-page bidding dossier on cloud endpoints incurs ~\textdollar 25.00 to \textdollar 50.00 per submission.
-Over an annual operational volume of 100 tender submissions, cloud costs exceed ₱140,000.00 (\textdollar 2,500.00).
-The proposed edge architecture reduces recurring operational costs strictly to local electrical power consumption (~65W average draw), achieving full capital cost amortization within 6 months of active deployment.
+\section{Gantt Chart}
+\label{sec:gantt_chart}
 
-\section{Project Development Schedule and Milestones}
-\label{sec:project_schedule}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{{figures/Figure 3.7}.png}
+\caption*{\textbf{Figure 3.7.1}}
+\label{fig_methodology_3_7_1}
+\end{figure}
 
-The engineering timeline spans eight work months, structured across six distinct phases executed sequentially and iteratively from Dataset Curation through Final System Validation.
+Figure 3.7.1 illustrates the chronological Gantt chart and milestone execution timetable across the eight-month research and engineering lifecycle.
+The schedule partitions project execution into six core phases:
+\begin{enumerate}
+    \item \textbf{Phase 1: Dataset Acquisition and Annotation (Months 1--2):} Curate 500+ PBD document pages, perform Label Studio bounding box annotations across four target layout classes, and establish baseline train/val/test splits.
+    \item \textbf{Phase 2: Vision Model Training and ONNX Optimization (Months 2--3):} Fine-tune YOLOv8s from DocLayNet checkpoints, optimize CIoU/DFL loss parameters, export model to ONNX format, and benchmark CPU vector inference execution.
+    \item \textbf{Phase 3: Pipeline Engine and Rule Development (Months 4--5):} Implement Ghostscript Flate stream repair, RapidOCR targeted C-buffers, deterministic regex parsers, pre-flight statutory pass/fail rules, and non-occluding stamp placement algorithms.
+    \item \textbf{Phase 4: Workspace UI and Dual-Track Integration (Months 5--6):} Construct React staging interface, Framer Motion SVG overlays, Track 1 PyMuPDF CTM flattener, and Track 2 SHA-256 evidentiary digital packager.
+    \item \textbf{Phase 5: Empirical Evaluation and Testing (Months 6--7):} Execute benchmark experiments measuring mAP50, IoU collision rates, CPU latency, and manual vs. automated turnaround times.
+    \item \textbf{Phase 6: Final Manuscript and Thesis Defense (Month 8):} Consolidate empirical benchmarks, refine system documentation, and conduct final oral defense.
+\end{enumerate}
 
-\subsection{Work Breakdown Structure \& Development Phases}
+\section{Test and Evaluation}
+\label{sec:test_and_evaluation}
 
-The project development schedule is partitioned into the following operational milestones:
-
-Phase 1: Dataset Acquisition \& Annotation (Months 1-2): Curate 500+ PBD document pages, perform Label Studio bounding box annotations across four target layout classes, and establish baseline train/val/test splits.
-
-Phase 2: Vision Model Training \& ONNX Optimization (Months 2-3): Fine-tune YOLOv8s from DocLayNet checkpoints, optimize CIoU/DFL loss parameters, export model to ONNX format, and benchmark CPU vector inference execution.
-
-Phase 3: Pipeline Engine \& Rule Development (Months 4-5): Implement Ghostscript Flate stream repair, RapidOCR targeted C-buffers, deterministic regex parsers, pre-flight statutory pass/fail rules, and non-occluding stamp placement algorithms.
-
-Phase 4: Workspace UI \& Dual-Track Integration (Months 5-6): Construct React staging interface, Framer Motion SVG overlays, Track 1 PyMuPDF CTM flattener, and Track 2 SHA-256 evidentiary digital packager.
-
-Phase 5: Empirical Evaluation \& Testing (Months 6-7): Execute benchmark experiments measuring mAP50, IoU collision rates, CPU latency, and manual vs. automated turnaround times.
-
-Phase 6: Final Manuscript \& Thesis Defense (Month 8): Consolidate empirical benchmarks, refine system documentation, and conduct final oral defense.
-
-\subsection{Project Timeline \& Gantt Schedule Summary}
-
-Table 3.8.1 summarizes the milestone distribution across the eight-month engineering schedule.
+This section defines the empirical tests that evaluate the proposed system against the objectives in Section 1.4.
+Under the non-discretionary ``pass/fail'' standard of RA 9184 and RA 12009, a single overlooked documentary defect results in summary disqualification, so the plan reports error rates with confidence intervals and compares each module with a stated baseline.
+Each test subsection first defines its metrics and then gives the protocol: data, baselines, and statistical analysis.
+All confidence intervals are two-sided at 95\%, and all hypothesis tests use $\alpha = 0.05$.
 
 \begin{table}[H]
 \centering
 \caption*{\textbf{Table 3.8.1}}
-\label{tab:milestone_schedule}
+\label{tab:evaluation_matrix}
 \begin{singlespace}
-\begin{tabular}{p{5.5cm}cccccccc}
+\footnotesize
+\begin{tabular}{cp{3.2cm}p{4.2cm}p{3.8cm}p{3.2cm}}
 \toprule[1.5pt]
-\textbf{Project Phase / Milestone} & \textbf{M1} & \textbf{M2} & \textbf{M3} & \textbf{M4} & \textbf{M5} & \textbf{M6} & \textbf{M7} & \textbf{M8} \\
+\textbf{Test} & \textbf{Testing Domain} & \textbf{Primary Metrics} & \textbf{Baseline / Reference} & \textbf{Statistical Method} \\
 \midrule[1.0pt]
-P1: Dataset Acquisition \& Annotation & \textbf{X} & \textbf{X} &  &  &  &  &  &  \\
-P2: Vision Training \& ONNX Optimization &  & \textbf{X} & \textbf{X} &  &  &  &  &  \\
-P3: Core Engine \& Statutory Audit Rules &  &  &  & \textbf{X} & \textbf{X} &  &  &  \\
-P4: Workspace UI \& Dual-Track Assembly &  &  &  &  & \textbf{X} & \textbf{X} &  &  \\
-P5: Empirical Testing \& Benchmarking &  &  &  &  &  &  & \textbf{X} &  \\
-P6: Manuscript Writing \& Defense &  &  &  &  &  &  &  & \textbf{X} \\
+1 (3.8.2) & Layout Segmentation & Precision, Recall, $\text{mAP}_{50}$, $\text{mAP}_{50-95}$, per-class AP & DocLayNet-pretrained YOLOv8s; COCO-pretrained YOLOv8s & File-level cluster bootstrap (1,000 iter.); per-file table \\
+2 (3.8.3) & Document Classification & Accuracy, Macro-$F_1$, confusion matrix & Magic Auto-Sort regex rules (filename only) & Wilson interval; exact McNemar test \\
+3 (3.8.4) & Statutory Pre-Flight Audit & Defect recall, false alarm rate, date exact match, CER & Fault-injection ground truth & Wilson interval; exact McNemar test \\
+4 (3.8.5) & Checklist Matching \& Order & Pair $F_1$, missing recall, false-missing rate, Moves, $d_K$ & Magic Auto-Sort; greedy matching on same score $S$ & Exact McNemar test; Wilcoxon signed-rank on $\Delta\text{Inv}$ \\
+5 (3.8.6) & Non-Occluding Stamping & Zero-collision rate, needs-review rate, silent-failure rate & Fixed bottom-right anchor (Static anchor baseline) & Exact McNemar test \\
+6 (3.8.7) & Geometry \& Coordinate Map & Upright-and-fit rate, registration error $\Delta E$ & Known synthetic ground truth & Wilson interval; mean, maximum $\Delta E$ \\
+7 (3.8.8) & Dual-Track Cryptography & SHA-256 equality, ByteRange digest validity, negative controls & Original source files & Deterministic check \\
+8 (3.8.9) & Edge Latency \& Memory & Per-stage time, P50, P95, PPM, peak RSS & Stage-wise latency budget & Descriptive percentiles \\
+9 (3.8.10) & End-to-End Turnaround & Turnaround time, minutes per 100 pages, clerical defect rate & Manual assembly & Mixed-effects model; paired $t$-test; Wilcoxon; Cohen's $d_z$ \\
+10 (3.8.11) & Workspace Usability & System Usability Scale (SUS) & Industry benchmark ($\text{SUS} = 68$) & One-sided one-sample $t$-test; Wilcoxon \\
 \bottomrule[1.5pt]
 \end{tabular}
 \end{singlespace}
 \end{table}
 
-\section{Proposed Testing and Evaluation Plan}
-\label{sec:testing_plan}
-
-To validate the system's performance against the specific objectives outlined in Section 1.4, a comprehensive empirical evaluation plan is established across four experimental dimensions: layout segmentation accuracy, stamp obstacle avoidance efficacy, execution latency on non-accelerated CPU hardware, and end-to-end turnaround time reduction.
-
-\subsection{Experiment 1: Document Layout Segmentation Benchmark (Objective H)}
-
-Layout analysis performance is evaluated on a held-out test set of 100 Philippine Bidding Document pages spanning native PDFs, clean scans, and degraded photocopies.
-Precision (P), Recall (R), and Mean Average Precision at IoU threshold 0.50 (mAP50) are computed across all four classes:
-
+Statistical Methods. Wilson interval: for a proportion with $k$ successes in $n$ trials ($\hat{p} = k/n$), the 95\% interval is given below.
+It stays inside 0 to 1 and is valid for small samples and for results near 0\% or 100\%, where the simple $\hat{p} \pm \text{margin}$ formula fails:
 \begin{equation}
-\label{eq:eval_metrics}
-\text{Precision} = \frac{\text{TP}}{\text{TP} + \text{FP}}, \quad \text{Recall} = \frac{\text{TP}}{\text{TP} + \text{FN}}, \quad \text{mAP@50} = \frac{1}{C} \sum_{c=1}^{C} \text{AP}_c @ 0.50
+\label{eq:wilson_interval}
+\frac{\hat{p} + \frac{z^2}{2n} \pm z\sqrt{\frac{\hat{p}(1-\hat{p})}{n} + \frac{z^2}{4n^2}}}{1 + \frac{z^2}{n}}, \quad z = 1.96
 \end{equation}
 
-The baseline YOLOv8s model pre-trained on generic DocLayNet is directly compared against the fine-tuned PBD layout model to quantify domain-specific accuracy gains for Philippine procurement instruments.
+\subsection{Evaluation Dataset, Splits, Annotation, and Fault Injection}
+\label{sec:eval_dataset}
 
-\subsection{Experiment 2: Stamp Obstacle Avoidance Efficacy (Objective B)}
+The experimental corpus comprises 50 real Philippine bidding document dossiers collected across infrastructure, consulting, and goods procurements under RA 9184 and RA 12009.
+The dataset spans 1,250 total document pages exhibiting genuine scanning artifacts, non-standard page dimensions, skewed angles, faded notary stamps, and diverse corporate signatures.
+The corpus is partitioned into training (60\%), validation (20\%), and held-out testing (20\%) splits using file-level cluster stratification to prevent document leakage across partitions.
+To rigorously benchmark the statutory audit and defect detection engines, an automated fault-injection suite seeds clerical defects into copies of authentic dossiers, generating matched pairs with controlled omissions, expired jurats, missing signatures, and inverted checklist ordering.
 
-The dynamic obstacle-free stamp placement engine is tested across 200 heterogeneous pages containing variable margin sizes, dense text paragraphs, low-situated notary jurats, and pre-existing wet-ink signatures.
-The success metric is defined as the percentage of pages achieving Zero-Collision Placement (IoU = 0 against all pre-existing visual elements).
-Cases triggering spatial fallback or manual operator intervention are logged and categorized by failure mode.
+\subsection{Deep Vision Layout Segmentation}
+\label{sec:eval_layout_segmentation}
 
-\subsection{Experiment 3: Execution Latency \& Resource Utilization (Objective H)}
+Layout accuracy is measured by the overlap between a predicted box $B_p$ and a ground-truth box $B_g$, given by the Intersection over Union:
+\begin{equation}
+\label{eq:iou_overlap}
+\text{IoU}(B_p, B_g) = \frac{\text{Area}(B_p \cap B_g)}{\text{Area}(B_p \cup B_g)}
+\end{equation}
 
-Per-page processing latency is benchmarked on non-accelerated multi-core CPUs.
-Execution time (in milliseconds) is recorded across individual pipeline stages: (1) JIT Flate stream repair \& WebP rendering, (2) ONNX YOLOv8s layout inference, (3) RapidOCR targeted C-buffer extraction, (4) pre-flight statutory auditing, and (5) Track 1 CTM stamp flattening.
-System memory (RAM) allocation is monitored to verify that peak consumption remains well within commodity 8GB-16GB thresholds.
+A prediction is a True Positive if its class matches a still-unmatched ground-truth box and $\text{IoU} \ge 0.50$, with predictions processed in descending order of confidence.
+An unmatched prediction is a False Positive, and an unmatched ground-truth box is a False Negative:
+\begin{equation}
+\label{eq:precision_recall_metrics}
+\text{Precision} = \frac{\text{TP}}{\text{TP} + \text{FP}}, \quad \text{Recall} = \frac{\text{TP}}{\text{TP} + \text{FN}}
+\end{equation}
 
-\subsection{Experiment 4: End-to-End Preparation Turnaround Time (Objective H)}
+Over the $C = 4$ semantic classes (\texttt{Signature\_Block}, \texttt{Official\_Seal}, \texttt{Table\_Grid}, and \texttt{Text\_Paragraph}), $\text{mAP}_{50}$ and $\text{mAP}_{50-95}$ (evaluated at thresholds $t \in \{0.50, 0.55, \dots, 0.95\}$) are calculated as:
+\begin{equation}
+\label{eq:map50_metric}
+\text{mAP}_{50} = \frac{1}{C} \sum_{c=1}^C \text{AP}_c @ 0.50
+\end{equation}
+\begin{equation}
+\label{eq:map50_95_metric}
+\text{mAP}_{50-95} = \frac{1}{10} \sum_{t \in \{0.50, 0.55, \dots, 0.95\}} \frac{1}{C} \sum_{c=1}^C \text{AP}_c |_{\text{IoU} = t}
+\end{equation}
 
-An end-to-end user study compares manual bidding document collation, manual page numbering, and manual stamping against automated assembly using the proposed local workspace.
-Ten representative procurement dossiers (ranging from 50 to 300 pages) are processed under both paradigms.
-Total preparation time (minutes per dossier) and clerical error rates (e.g., mispaginated pages, occluded signature fields, unverified jurat execution dates) are statistically evaluated using paired t-tests to measure efficiency gains and defect reduction significance.
+\subsection{Automated Document Classification}
+\label{sec:eval_doc_classification}
 
-[Specify the evaluation metrics for layout segmentation (mAP50, precision, recall), stamp placement success rates, execution latency on commodity CPUs, and end-to-end preparation turnaround time.]
+The classification module assigns each document unit to one of $K = 6$ regulatory categories (Omnibus Sworn Statement, Bid Securing Declaration, Mayor's Permit, Tax Clearance, Audited Financial Statements, and Technical Specifications).
+Macro-$F_1$ weights rare classes equally with frequent ones:
+\begin{equation}
+\label{eq:macro_f1}
+\text{Macro-}F_1 = \frac{1}{K} \sum_{k=1}^K F_{1, k}
+\end{equation}
+Performance is benchmarked against a baseline filename regex sorter using exact McNemar hypothesis testing.
+
+\subsection{Pre-Flight Statutory Compliance Audit}
+\label{sec:eval_statutory_audit}
+
+The statutory compliance audit engine is evaluated on its ability to detect clerical defects on affidavit execution pages (OSS and BSD).
+Defect recall, precision, and false alarm rate (FAR) are defined as:
+\begin{equation}
+\label{eq:defect_recall_far}
+\text{Recall}_{\text{defect}} = \frac{\text{TP}}{\text{TP} + \text{FN}}, \quad \text{Precision}_{\text{defect}} = \frac{\text{TP}}{\text{TP} + \text{FP}}, \quad \text{FAR} = \frac{\text{FP}}{\text{FP} + \text{TN}}
+\end{equation}
+A missed defect leads to summary disqualification while a false alarm costs a short manual check, so defect recall and FAR are the primary evaluation criteria.
+Dates extracted by OCR are scored by exact match and character error rate (CER):
+\begin{equation}
+\label{eq:cer_metric}
+\text{CER} = \frac{\text{Lev}(s_{\text{ocr}}, s_{\text{gt}})}{|s_{\text{gt}}|}
+\end{equation}
+
+\subsection{Checklist Matching and Order Verification}
+\label{sec:eval_checklist_matching}
+
+The checklist engine assigns documents to checklist slots with the Hungarian algorithm (Section 3.5.4).
+Assignment quality is measured by pair precision, recall, and $F_1$ against the ground-truth pairing.
+Completeness is measured by the recall and false-missing rate of the missing-item report:
+\begin{equation}
+\label{eq:missing_item_metrics}
+\text{Recall}_{\text{missing}} = \frac{\text{TP}_{\text{missing}}}{\text{TP}_{\text{missing}} + \text{FN}_{\text{missing}}}, \quad \text{Rate}_{\text{false-missing}} = \frac{\text{FP}_{\text{missing}}}{\text{FP}_{\text{missing}} + \text{TN}_{\text{missing}}}
+\end{equation}
+For accepted documents in upload order, order quality is reported by the inversion count $\text{Inv}(Q)$, minimum moves $\text{Moves}(Q) = m - \text{LIS}(Q)$, and normalized Kendall distance:
+\begin{equation}
+\label{eq:kendall_distance}
+d_K = \frac{\text{Inv}(Q)}{\frac{1}{2}m(m-1)} \in [0, 1]
+\end{equation}
+
+\subsection{Dynamic Non-Occluding Stamp Placement}
+\label{sec:eval_stamp_placement}
+
+The placement engine searches the lower-right region of the page (Section 3.5.3) for a position that minimizes cost $J$.
+Placement is audited against human-annotated ground-truth obstacle boxes $B_k^{\text{GT}}$, $k = 1, \dots, M$, drawn on the final A4 render of each page.
+The collision indicator is evaluated as:
+\begin{equation}
+\label{eq:collision_indicator}
+\text{Collision}(p) = \mathbf{1}\left[ \text{Area}\left( B_{\text{stamp}} \cap \bigcup_{k=1}^M B_k^{\text{GT}} \right) > 0 \right]
+\end{equation}
+The primary evaluation metrics are the zero-collision rate, needs-review rate, and silent-failure rate:
+\begin{equation}
+\label{eq:collision_rates}
+R_{\text{zero-collision}} = \frac{N_{\text{zero-collision}}}{N_{\text{total}}}, \quad R_{\text{silent-failure}} = \frac{N_{\text{silent-failure}}}{N_{\text{total}}}
+\end{equation}
+
+\subsection{Geometric Normalization and Coordinate Alignment}
+\label{sec:eval_geom_normalization}
+
+Every output page has the A4 size by construction.
+A page counts as upright and fit if its output size is within $\epsilon = 0.01\text{ pt}$ of $595.276 \times 841.890\text{ pt}$, a marker glyph placed at a known corner appears at the expected corner, and the rendered content maintains its aspect ratio within $0.1\%$:
+\begin{equation}
+\label{eq:rate_fit}
+\text{Rate}_{\text{fit}} = \frac{N_{\text{upright and fit}}}{N_{\text{total}}}
+\end{equation}
+Coordinate conversion accuracy across the four spaces of Section 3.5.2 is measured by the registration error:
+\begin{equation}
+\label{eq:registration_error}
+\Delta E = \sqrt{(x_{\text{projected}} - x_{\text{actual}})^2 + (y_{\text{projected}} - y_{\text{actual}})^2}
+\end{equation}
+The pass criterion is $\Delta E \le 1.5\text{ pt}$, approximately one detector pixel at A4 scale.
+
+\subsection{Dual-Track Cryptographic Evidentiary Preservation}
+\label{sec:eval_crypto_preservation}
+
+Under RA 8792 and A.M. No. 01-7-01-SC, a digital signature preserves legal non-repudiation only if signed byte streams are unaltered.
+Track 2 returns source bytes exactly, verified by SHA-256 digest equality:
+\begin{equation}
+\label{eq:preservation_digest}
+\text{Preserved}(f) = \mathbf{1}\left[ \text{SHA256}(f_{\text{out}}) = \text{SHA256}(f_{\text{in}}) \right]
+\end{equation}
+Embedded PKCS\#7 signature validity is evaluated using Adobe Acrobat and OpenSSL cryptographic CLI validators to guarantee zero signature invalidation.
+
+\subsection{Edge Runtime Latency and Resource Utilization}
+\label{sec:eval_latency_resource}
+
+Latency is profiled on commodity multi-core CPU hardware without GPU acceleration.
+Throughput in pages per minute (PPM) across a dossier $d$ of $N_d$ pages is:
+\begin{equation}
+\label{eq:throughput_ppm}
+\text{PPM} = \frac{60 \cdot N_d}{T_{\text{wall}}(d)}
+\end{equation}
+Memory consumption is measured via peak resident set size (RSS), asserting a maximum threshold of $4\text{ GB}$ to ensure edge stability.
+
+\subsection{End-to-End Preparation Turnaround and Clerical Defect Reduction}
+\label{sec:eval_turnaround}
+
+Turnaround acceleration is evaluated across 10 workflow dossiers arranged into 5 matched pairs.
+The paired time difference and relative turnaround reduction are:
+\begin{equation}
+\label{eq:turnaround_reduction}
+\Delta T_i = T_{\text{manual}}^{(i)} - T_{\text{system}}^{(i)}, \quad \bar{R} = \frac{\sum_i \Delta T_i}{\sum_i T_{\text{manual}}^{(i)}}
+\end{equation}
+Statistical significance is verified via paired $t$-tests, Wilcoxon signed-rank tests, and Cohen's $d_z$ effect size estimation.
+
+\subsection{Local Interactive Workspace Usability Evaluation}
+\label{sec:eval_usability}
+
+User experience and operational workflow viability are measured using the System Usability Scale (SUS) across 10 bidding procurement officers.
+The composite SUS score is computed as:
+\begin{equation}
+\label{eq:sus_score}
+\text{SUS} = 2.5 \left[ \sum_{i \in \text{odd}} (x_i - 1) + \sum_{i \in \text{even}} (5 - x_i) \right]
+\end{equation}
+where $x_i \in \{1, 2, 3, 4, 5\}$ denotes the Likert response to item $i$.
+The evaluation benchmarks the framework against the industry standard threshold ($\text{SUS} \ge 68$).

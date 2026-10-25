@@ -111,9 +111,10 @@
     skip=6pt
 }
 
-% Equation numbering in Times New Roman bold: (Chapter.Equation)
+% Equation numbering in Times New Roman bold: (Chapter.Section.Equation)
 \usepackage{amsmath}
-\renewcommand{\theequation}{\textbf{(\thechapter.\arabic{equation})}}
+\numberwithin{equation}{section}
+\renewcommand{\theequation}{\textbf{\thesection.\arabic{equation}}}
 
 % ==============================================================================
 % Bibliography & In-Text Citations (ADNU ECE/CpE Department)
