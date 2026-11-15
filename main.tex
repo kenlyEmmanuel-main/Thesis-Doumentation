@@ -1,138 +1,10 @@
 \documentclass[12pt, a4paper]{report}
+\input{preamble}
 
-% ==============================================================================
-% Geometry & Margin Settings (ADNU ECE/CpE Section A & C)
-% Top: 1.0", Bottom: 1.0", Right: 1.0", Left: 1.25"
-% Pagination: 0.5" from top/bottom
-% ==============================================================================
-\usepackage[
-    top=1.0in,
-    bottom=1.0in,
-    right=1.0in,
-    left=1.25in,
-    headheight=14.5pt,
-    headsep=0.5in,
-    footskip=0.5in
-]{geometry}
-
-% ==============================================================================
-% Typography & Font Styling (ADNU ECE/CpE Section B)
-% Times New Roman (TNR) 12pt throughout
-% ==============================================================================
-\usepackage{newtxtext, newtxmath}
-
-% ==============================================================================
-% Line Spacing & Paragraph Formatting (ADNU ECE/CpE Section F)
-% Body double spaced, 0pt before/after, 1.50cm first line indent
-% ==============================================================================
-\usepackage{setspace}
-\doublespacing
-\setlength{\parindent}{1.50cm}
-\setlength{\parskip}{0pt}
-
-% ==============================================================================
-% Header & Footer Pagination (ADNU ECE/CpE Section C)
-% Titles of major sections: page number bottom center, 0.5" from bottom
-% Pages with no major section titles: page number upper right corner, 0.5" from top
-% ==============================================================================
-\usepackage{fancyhdr}
-\pagestyle{fancy}
-\fancyhf{}
-\fancyhead[R]{\thepage}
-\renewcommand{\headrulewidth}{0pt}
-\renewcommand{\footrulewidth}{0pt}
-
-% Redefine plain style used automatically by \chapter
-\fancypagestyle{plain}{
-    \fancyhf{}
-    \fancyfoot[C]{\thepage}
-    \renewcommand{\headrulewidth}{0pt}
-    \renewcommand{\footrulewidth}{0pt}
-}
-
-% ==============================================================================
-% Heading Formats & Hierarchy (ADNU ECE/CpE Section F)
-% Chapter: "Chapter X" (bold, title case) \\ "TITLE" (bold, all caps, centered)
-% ==============================================================================
-\usepackage{titlesec}
-
-\titleformat{\chapter}[display]
-    {\normalfont\fontsize{14pt}{17pt}\bfseries\centering}
-    {Chapter \thechapter}
-    {1\baselineskip}
-    {\MakeUppercase}
-\titlespacing*{\chapter}{0pt}{0pt}{1\baselineskip}
-
-\titleformat{\section}
-    {\normalfont\fontsize{12pt}{15pt}\bfseries}
-    {\thesection}
-    {1em}
-    {}
-\titlespacing*{\section}{0pt}{30pt plus 4pt minus 2pt}{0pt}
-
-\titleformat{\subsection}
-    {\normalfont\fontsize{12pt}{15pt}\bfseries}
-    {\thesubsection}
-    {1em}
-    {}
-\titlespacing*{\subsection}{0pt}{30pt plus 4pt minus 2pt}{0pt}
-
-\titleformat{\subsubsection}
-    {\normalfont\fontsize{12pt}{15pt}\bfseries}
-    {\thesubsubsection}
-    {1em}
-    {}
-\titlespacing*{\subsubsection}{0pt}{30pt plus 4pt minus 2pt}{0pt}
-
-\setcounter{secnumdepth}{4}
-\setcounter{tocdepth}{3}
-
-% ==============================================================================
-% Tables, Figures, & Captions (ADNU ECE/CpE Section G)
-% ==============================================================================
-\usepackage{graphicx}
-\usepackage{float}
-\usepackage{booktabs}
-\usepackage{caption}
-
-\captionsetup[table]{
-    labelsep=period,
-    labelfont=bf,
-    textfont=normalfont,
-    position=top,
-    skip=6pt
-}
-
-\captionsetup[figure]{
-    labelsep=period,
-    labelfont=bf,
-    textfont=normalfont,
-    position=bottom,
-    skip=6pt
-}
-
-% Equation numbering in Times New Roman bold: (Chapter.Section.Equation)
-\usepackage{amsmath}
-\numberwithin{equation}{section}
-\renewcommand{\theequation}{\textbf{\thesection.\arabic{equation}}}
-
-% ==============================================================================
-% Bibliography & In-Text Citations (ADNU ECE/CpE Department)
-% IEEE Citation Style via cite + IEEEtran
-% ==============================================================================
-\usepackage{cite}
-\providecommand{\citep}[1]{\cite{#1}}
-\providecommand{\citet}[1]{\cite{#1}}
-
-% Hyperlink styling
-\usepackage{hyperref}
-\hypersetup{
-    colorlinks=true,
-    linkcolor=black,
-    filecolor=black,
-    urlcolor=blue,
-    citecolor=black
-}
+% The build script defines these only for isolated, full-context previews.
+\ifdefined\thesispreview
+    \expandafter\includeonly\expandafter{\thesisinclude}
+\fi
 
 % ==============================================================================
 % Document Structure
@@ -140,11 +12,15 @@
 \begin{document}
 
 % Front Matter
+\ifdefined\thesispreview\else
 \pagenumbering{roman}
+\hypersetup{pageanchor=false}
 \input{frontmatter/titlepage}
+\hypersetup{pageanchor=true}
 %\input{frontmatter/abstract}
 \tableofcontents
 \newpage
+\fi
 
 % Main Chapters
 \pagenumbering{arabic}
@@ -155,11 +31,15 @@
 %\include{chapters/ch5_recommendation}
 
 % References (IEEE Style)
+\ifdefined\thesischapterpreview\else
 \clearpage
 \phantomsection
 \addcontentsline{toc}{chapter}{References}
+% Retain all sources listed in the authors' manuscript, including uncited entries.
+\nocite{ref1,ref2,ref3,ref4,ref5,ref6,ref7,ref8,ref9,ref10,ref11,ref12,ref13,ref14,ref15,ref16,ref17,ref18,ref19,ref20,ref21,ref22,ref23,ref24,ref25,ref26,ref27,ref28,ref29,ref30,ref31,ref32,ref33,ref34,ref35,ref36,ref37,ref38,ref39,ref40,ref41,ref42,ref43,ref44,ref45,ref46,ref47,ref48,ref49,ref50,ref51,ref52,ref53,ref54,ref55,ref56,ref57,ref58,docxa1,docxa2,docxa4,docxa5,docxa6,docxa7,docxb1,docxb2,docxc1}
 \bibliographystyle{IEEEtran}
 \bibliography{references}
+\fi
 
 % Appendices (Omitted for proposal manuscript)
 %\appendix

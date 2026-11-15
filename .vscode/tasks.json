@@ -1,0 +1,46 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Thesis: Build full",
+            "type": "process",
+            "command": "python",
+            "args": ["scripts/build.py", "full"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "group": { "kind": "build", "isDefault": true },
+            "problemMatcher": []
+        },
+        {
+            "label": "Thesis: Build chapter 1",
+            "type": "process",
+            "command": "python",
+            "args": ["scripts/build.py", "chapter1"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": []
+        },
+        {
+            "label": "Thesis: Build chapter 2",
+            "type": "process",
+            "command": "python",
+            "args": ["scripts/build.py", "chapter2"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": []
+        },
+        {
+            "label": "Thesis: Build chapter 3",
+            "type": "process",
+            "command": "python",
+            "args": ["scripts/build.py", "chapter3"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": []
+        },
+        {
+            "label": "Thesis: Build references",
+            "type": "process",
+            "command": "python",
+            "args": ["scripts/build.py", "references"],
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": []
+        }
+    ]
+}

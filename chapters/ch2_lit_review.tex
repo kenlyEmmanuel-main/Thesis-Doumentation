@@ -6,7 +6,7 @@
 \subsection{Portable Document Format (PDF) and ISO 32000 Object Hierarchy}
 
 The Portable Document Format (PDF) is an internationally standardized, device-independent page description architecture governed by ISO 32000-1:2008 and ISO 32000-2:2020 \cite{ref12, ref13}.
-Rooted in the PostScript imaging model, a PDF document is structurally organized as an acyclic directed graph of eight fundamental object primitives: booleans, numeric scalars, literal/hexadecimal strings, names (/Name), arrays, dictionaries (<< ... >>), streams (stream ... endstream), and the null object \cite{ref12}.
+Rooted in the PostScript imaging model, a PDF document is structurally organized as an acyclic directed graph of eight fundamental object primitives: booleans, numeric scalars, literal/hexadecimal strings, names (/Name), arrays, dictionaries (\textless\textless{} ... \textgreater\textgreater{}), streams (stream ... endstream), and the null object \cite{ref12}.
 The file architecture enforces an indirect object referencing mechanism (obj ... endobj) coordinated by a trailing cross-reference (xref) table that indexes the exact byte offsets of every object within the binary stream.
 Document visual hierarchy branches downwards from a root /Catalog dictionary to a /Pages tree, where individual page leaf nodes (/Type /Page) bind physical dimension bounding boxes (/MediaBox, /CropBox), external graphical assets (/Resources), rendering instructions (/Contents), and interactive graphics (/Annots) \cite{ref12, ref13}.
 
@@ -30,7 +30,7 @@ An affine transformation preserves collinearity and spatial ratios, mapping user
 \end{equation}
 
 Under the ISO 32000 specification, visual annotations—including interactive form fields, compliance stamps, and digitized signature overlays—reside in an independent /Annots array separate from the underlying page content stream \cite{ref12}.
-These annotations maintain their own bounding rectangles (/Rect) and normal appearance streams (/AP << /N ... >>).
+These annotations maintain their own bounding rectangles (/Rect) and normal appearance streams (/AP \textless\textless{} /N ... \textgreater\textgreater{}).
 Annotation flattening is the formal document transformation process that evaluates the appearance stream through the Current Transformation Matrix (CTM), calculates rotational and translation offsets, and serializes the resulting graphic operators directly into the page's primary /Contents stream while purging the original /Annots dictionary references \cite{ref17}.
 This guarantees that visual endorsements remain permanently visible across legacy viewers and physical print rasterizers.
 
@@ -55,19 +55,75 @@ DBNet++ incorporates an adaptive, differentiable thresholding function directly 
 Detected line proposals are subsequently cropped and normalized into the SVTR recognition network, which utilizes localized patch-based self-attention mechanisms to decode character sequences at high accuracy while avoiding the heavy computational footprint of dense autoregressive sequence decoders \cite{ref24}.
 Operating within shared C-buffers, modern in-memory OCR pipelines eliminate intermediate disk rasterization bottlenecks.
 
-\subsection{Regular Expressions (Regex) and Deterministic Pattern Matching}
+\subsection{Regular Expressions, OCR Error Post-Processing, and String Distance Metrics}
+\label{sec:ocr_error_postprocessing}
 
-A Regular Expression (Regex) is a formalized algebraic notation defined within formal language theory that describes a set of character strings conforming to a specified syntactic pattern \cite{ref25}.
-Rooted in the mathematical foundations of finite-state automata, a regular expression is compiled into a Deterministic Finite Automaton (DFA) that processes an input string of length n in deterministic O(n) linear time \cite{ref25}.
-Recent empirical studies on pattern matching engines confirm that deterministic lexical parsing provides mathematically bounded execution times and predictable resource consumption, making it ideal for safety-critical data pipelines and deterministic compliance extraction where probabilistic language models risk hallucinations \cite{ref25, ref26}.
+In digital document analysis, alphanumeric streams extracted by optical character recognition (OCR) engines frequently contain optical degradation artifacts induced by paper grain, scanning noise, uneven binarization, and skew \cite{ref20, ref22}.
+Optical character errors in Latin-script document processing fall into three morphological categories: substitutions, deletions, and insertions.
+Empirical studies in document recognition demonstrate that character substitutions heavily dominate (accounting for over 70\% of total recognition errors), typically stemming from high visual glyph similarity---such as alphanumeric confusions between zero and capital `O' ($0 \leftrightarrow O$), the numeral one, lowercase `l', and capital `I' ($1 \leftrightarrow l \leftrightarrow I$), and numeral five with capital `S' ($5 \leftrightarrow S$) \cite{docxa4}.
 
-\subsection{Content-Aware Document Classification and Metadata-Driven Asset Hydration}
+To evaluate recognition fidelity against authentic ground-truth text, performance is quantified through Character Error Rate (CER) and Word Error Rate (WER).
+Both metrics are formalized via the Levenshtein distance---the minimum number of single-character edit operations (substitutions $S$, deletions $D$, and insertions $I$) required to transform an OCR hypothesis string into the reference string of length $N_{\text{ref}}$ \cite{docxa5}:
+\begin{equation}
+\label{eq:theory_cer}
+\mathrm{CER} = \frac{S + D + I}{N_{\text{ref}}}.
+\end{equation}
+Word Error Rate applies an identical Levenshtein formulation computed across whitespace-delimited word tokens.
 
-Document classification and canonical asset retrieval represent foundational disciplines within Information Retrieval (IR) and enterprise content management governed by formal categorization models \cite{ref59}.
-In information systems architectures, unstructured and semi-structured digital records are categorized by mapping their lexical token distributions, structural layout primitives, and temporal attributes into discrete taxonomic vectors $D_i = \langle T_{\text{category}}, \tau_{\text{issue}}, \tau_{\text{expiry}}, H_{\text{hash}} \rangle$.
-Deterministic rule-based classification models evaluate document representations against formal schema taxonomies, identifying designated regulatory classes without introducing the stochastic hallucinations or computational latency characteristic of generative language models \cite{ref25, ref59}.
-Furthermore, temporal validity constraint systems formally model document eligibility as a bounded interval evaluation $\tau_{\text{submission}} \le \tau_{\text{expiry}}$, enabling automated filtering of stale, expired, or non-compliant digital instruments.
-When coupled with canonical single-instance storage principles, the retrieval engine stores an immutable master asset at rest and references it across dynamic transaction workspaces via relational pointers, eliminating data redundancy and disk I/O bloat.
+In downstream information extraction, post-OCR processing operates across four principal methodology families: dictionary lookup, statistical language modeling, neural sequence-to-sequence correction, and deterministic rule-based pattern matching.
+While neural language models offer contextual correction, their probabilistic nature introduces stochastic hallucinations, non-deterministic latency, and potential privacy liabilities in compliance-critical pipelines.
+Consequently, deterministic rule-based verification provides mathematically bounded execution guarantees and zero hallucination risk, making it the required standard for regulatory data extraction.
+
+Fuzzy string comparison accommodates optical noise through normalized Levenshtein similarity:
+\begin{equation}
+\label{eq:theory_levenshtein_similarity}
+\operatorname{Sim}(s_1, s_2) = 1 - \frac{\operatorname{Lev}(s_1, s_2)}{\max(|s_1|, |s_2|)}.
+\end{equation}
+In approximate pattern matching, a similarity threshold $\theta_k$ governs the trade-off between sensitivity and precision: setting $\theta_k = 0.80$ accommodates localized character substitutions in descriptive headings while rejecting spurious cross-category matches.
+Crucially, while approximate matching is appropriate for narrative clauses, statutory execution numbers, corporate identification codes, and calendar dates strictly forbid fuzzy matching, as a single substituted numeral fundamentally alters contractual validity.
+
+Deterministic extraction of structured statutory fields is governed by formal language theory and Regular Expressions (Regex) \cite{ref25}.
+A regular expression defines a regular language recognized by a finite automaton.
+While Non-deterministic Finite Automata (NFA) with backtracking engines exhibit worst-case exponential time complexity $O(2^n)$ on adversarial inputs, compiling patterns into a Deterministic Finite Automaton (DFA) using Thompson's construction and subset construction guarantees strictly linear $O(n)$ execution time relative to input text length, completely eliminating catastrophic backtracking vulnerabilities \cite{ref25, ref26}.
+When coupled with calendar validation automata, deterministic regex patterns parse execution dates, compare them against tender reference timestamps, and verify temporal document validity within mathematically bounded processing cycles.
+
+\subsection{Bipartite Matching and Sequence Order Measures}
+\label{sec:matching_sequence_theory}
+
+A bipartite graph consists of two disjoint sets of vertices, with edges connecting vertices from one set to vertices in the other.
+A matching is a set of edges in which no two edges share a vertex.
+In a weighted bipartite graph, each edge is assigned a value representing the benefit or cost of a possible pairing.
+A maximum-weight matching selects compatible pairs whose combined weight is greatest while preserving the one-to-one constraint \cite{docxa6}.
+
+Let $U$ and $V$ be the two vertex sets, $E$ the set of edges between them, and $w_{ij}$ the weight of edge $(u_i, v_j)$.
+A maximum-weight matching can be expressed as:
+\begin{equation}
+\label{eq:theory_bipartite_matching}
+M^* = \operatorname*{arg\,max}_{M \subseteq E} \sum_{(u_i, v_j) \in M} w_{ij},
+\end{equation}
+subject to the condition that each vertex appears in at most one edge of $M$.
+The Hungarian method solves the related assignment problem efficiently, avoiding the need to enumerate every possible assignment \cite{docxa6}.
+
+Once elements are assigned positions in a reference order, their sequence can be examined using inversions.
+For a sequence of distinct ranks $Q = (q_1, q_2, \ldots, q_m)$, an inversion is a pair of indices $(a, b)$ for which $a < b$ but $q_a > q_b$.
+The inversion count, denoted $\operatorname{Inv}(Q)$, measures pairwise disagreements with the reference order.
+It also equals the minimum number of adjacent swaps required to sort the sequence.
+For $m \ge 2$, the normalized Kendall distance divides this count by the maximum possible number of inversions:
+\begin{equation}
+\label{eq:theory_kendall_distance}
+d_K = \frac{2\operatorname{Inv}(Q)}{m(m-1)}.
+\end{equation}
+A value of zero indicates that the sequence is in the reference order, while a value of one indicates complete reversal.
+
+A longest increasing subsequence (LIS) is a subsequence whose elements appear in increasing order and whose length is maximal among all such subsequences.
+The elements in an LIS are already in the correct relative order.
+Therefore, if one operation consists of removing an individual element and reinserting it elsewhere, the minimum number of relocations needed to sort a sequence of distinct ranks is:
+\begin{equation}
+\label{eq:theory_sequence_moves}
+\operatorname{Moves}(Q) = m - \operatorname{LIS}(Q).
+\end{equation}
+Unlike inversion count, which measures adjacent swaps, this quantity measures individual relocations.
+The LIS length can be determined efficiently using patience sorting and binary search \cite{docxa7}.
 
 \subsection{Computer Vision and Document Layout Analysis (DLA)}
 
@@ -100,50 +156,61 @@ Deep learning architectures trained in high-level research environments (such as
 ONNX Runtime addresses these deployment bottlenecks through an optimizing compiler pipeline that applies static graph transformations, including constant folding, redundant node elimination, and horizontal and vertical operator fusion (e.g., fusing Conv-BatchNorm-SiLU kernels into a single contiguous computational operator) \cite{ref32, ref33}.
 Furthermore, ONNX Runtime targets CPU vector instruction sets (such as x86-64 SSE4.2 and AVX-512), transforming dense tensor operations into parallelized Single Instruction, Multiple Data (SIMD) micro-kernels that fully saturate multi-threaded CPU pipelines \cite{ref33}.
 
-\subsection{Dynamic Whitespace Evaluation and Non-Occluding Stamp Placement}
+\subsection{Object Detection Performance Metrics and Spatial Evaluation}
+\label{sec:detection_metrics_theory}
 
-In document finishing and automated preparation workflows, affixing required administrative markings without obscuring underlying text or legal insignia constitutes an essential operational requirement \cite{ref34, ref35}.
-Traditional document preparation utilities rely on static, hardcoded margin coordinates, which routinely trigger fatal visual collisions ('text-stomping') whenever uploaded documents contain non-standard margins, legal jurats, or signatures situated in target corners.
-In contrast, dynamic whitespace evaluation models document elements as spatial obstacles and calculate available rectangular clearance across candidate margins (such as the page's lower-third or fourth quadrant).
-By projecting detected layout boundaries into a spatial clearance field, placement engines search for open whitespace that accommodates the stamp dimensions without intersecting occupied boundaries, dynamically steering annotations into adjacent clear areas to guarantee non-occluding placement \cite{ref34, ref35}.
+In computer vision and document layout analysis, evaluating deep object detectors requires quantitative protocols that simultaneously assess bounding-box localization precision and semantic category classification \cite{docxa1}.
+In spatial detection tasks, standard classification accuracy is inapplicable because an algorithm must predict both continuous spatial coordinates and discrete class probabilities.
+Established benchmark frameworks---predominantly the PASCAL Visual Object Classes (VOC) and Microsoft Common Objects in Context (COCO) standards---formulate evaluation as a constrained matching problem between predicted bounding boxes and human-annotated ground-truth geometries \cite{docxa1}.
 
-\subsection{React Framework and Virtual DOM State Architecture}
+Spatial overlap is evaluated using the Intersection over Union (IoU), defined as the Jaccard similarity coefficient between a predicted bounding box $B_p$ and a ground-truth box $B_g$:
+\begin{equation}
+\label{eq:theory_iou}
+\operatorname{IoU}(B_p, B_g) = \frac{\operatorname{Area}(B_p \cap B_g)}{\operatorname{Area}(B_p \cup B_g)}.
+\end{equation}
+Under standard benchmark conventions, candidate proposals satisfying $\operatorname{IoU} \ge 0.50$ against an unmatched ground-truth target of the identical semantic class are classified as True Positives (TP) \cite{docxa1}.
+Predictions failing this overlap threshold or assigned to already-matched ground-truth boxes are categorized as False Positives (FP), while undetected ground-truth entities are counted as False Negatives (FN).
+In compliance-critical and legal document analysis, evaluation criteria prioritize high Recall ($R = \mathrm{TP}/(\mathrm{TP}+\mathrm{FN})$) over Precision ($P = \mathrm{TP}/(\mathrm{TP}+\mathrm{FP})$), as failing to localize an authentic legal mark or signature field carries severe procedural consequences compared to resolving false-positive background noise during subsequent inspection stages.
 
-The React framework is a declarative, component-driven client-side user interface architecture based on unidirectional data flow, immutable state transitions, and Virtual Document Object Model (Virtual DOM) reconciliation \cite{ref36}.
-Traditional imperative document object model (DOM) manipulation mutates browser tree nodes directly, triggering expensive layout recalculations, style invalidations, and browser repaints on every state change.
-React supersedes this through an in-memory structural representation of the UI tree.
-When component state updates occur, a heuristic O(n) tree diffing algorithm (the React reconciliation engine) compares the new virtual DOM tree with the prior snapshot, computing a minimal batch of visual mutation patches applied synchronously to the real browser DOM \cite{ref36}.
-In multi-file document workspaces, memoized component architectures ensure that state modifications re-render only affected component subtrees, eliminating client-side interface lag.
+To eliminate redundant overlapping proposals generated across multi-scale feature pyramids, detectors execute Non-Maximum Suppression (NMS).
+Candidate boxes of a given class are greedily clustered in descending order of confidence; any secondary proposal exhibiting an overlap exceeding the suppression threshold ($\operatorname{IoU}_{\text{NMS}} = 0.45$) relative to the dominant box is pruned.
+Across varying confidence operating thresholds $\gamma \in [0, 1]$, the resulting trade-off traces out a continuous Precision--Recall curve $p(r)$.
+Model performance is aggregated via Average Precision (AP), calculated as the area under the curve using all-point monotonic interpolation to suppress localized numerical ranking fluctuations \cite{docxa1}:
+\begin{equation}
+\label{eq:theory_average_precision}
+\mathrm{AP} = \int_0^1 \max_{\tilde{r} \ge r} p(\tilde{r}) \, dr.
+\end{equation}
 
-\subsection{Framer Motion Vector Overlays and CSS Hardware Acceleration}
+In multi-class document environments, overall detection efficacy is reported through Mean Average Precision ($\mathrm{mAP}_{50}$), representing the unweighted mean of AP across all semantic classes at the baseline $\operatorname{IoU} = 0.50$ threshold.
+To evaluate localization fidelity under stricter geometric constraints, the $\mathrm{mAP}_{50-95}$ metric computes the average across ten discrete IoU increments from 0.50 to 0.95.
+Furthermore, evaluating per-class AP remains essential in document processing due to structural scale disparities: dense narrative text paragraphs and tabular grids present extensive, high-contrast rectangular boundaries that achieve high IoU overlap, whereas small, irregular graphical marks (such as official notary dry seals and cursive signature strokes) exhibit non-uniform ink distributions and localized edge variance.
+Finally, to confirm that custom ground-truth benchmark corpora are statistically reliable prior to model evaluation, annotation consistency across independent human annotators is validated using Cohen's Kappa coefficient ($\kappa = (P_o-P_e)/(1-P_e)$) to confirm that semantic region boundaries are reproducible \cite{docxa2}.
 
-In modern web graphics architectures, declarative vector overlays decouple visual annotations from pixel-buffer canvas elements by rendering interactive elements directly within the browser's hardware-accelerated Document Object Model (DOM) \cite{ref37, ref38}.
-Historically, rich document viewers utilized HTML5 Canvas frameworks (such as Fabric.js) which maintain a single contiguous bitmap raster buffer.
-While flexible for raw graphic creation, large canvas instances suffer from severe V8 heap memory bloat, high CPU overhead during continuous re-rendering, and fatal browser context loss when scaling multi-page document views \cite{ref37}.
-In contrast, rendering vector overlays using Scalable Vector Graphics (SVG) and CSS hardware-accelerated transforms (transform: translate3d(...)) delegates rendering calculations directly to client GPU compositing layers \cite{ref38}.
-When combined with spring-physics motion systems (such as Framer Motion), interactive gestures achieve fluid spatial responsiveness without intermediate buffer re-rasterization.
+\subsection{Spatial Intersection Algorithms, Occupancy Grids, and Distance Transforms}
+\label{sec:spatial_clearance_theory}
 
-\subsection{PyMuPDF Server-Side Rasterization and WebP Image Streaming}
+In computational geometry and automated document image finishing, determining collision-free spatial clearance for administrative overlays requires evaluating geometric intersections across dense, heterogeneous page layouts \cite{ref34, ref35}.
+Traditional document finishing approaches rely on static coordinate placement, which frequently triggers visual collisions (``text-stomping'') when processed pages contain variable margins, marginal annotations, or legal marks in candidate corners.
+In spatial algorithms, resolving collision-free placement is formulated as a spatial obstacle modeling problem governed by bounding-box intersection testing, discrete spatial occupancy mapping, and continuous distance transform fields \cite{ref34, ref35}.
 
-Document image streaming architectures decouple complex PDF parsing from client browser runtimes by performing high-throughput vector rasterization on server infrastructure and streaming lightweight, compressed raster bitmaps to client endpoints \cite{ref39, ref40}.
-Traditional web document viewers (such as client-side PDF.js) download full binary PDF files into browser memory, requiring the client's local JavaScript engine to parse cross-reference tables, execute PostScript type-3 font interpreters, and decompress large JBIG2/Flate streams.
-For multi-hundred-megabyte procurement dossiers, this client-heavy paradigm exhausts browser memory limits, causes multi-second rendering delays, and induces page-blanking anomalies.
-Server-side rasterization via high-performance C-libraries (such as MuPDF / PyMuPDF) executes native SIMD-accelerated graphics pipelines that render arbitrary PDF pages into standardized visual bitstreams in under 15 milliseconds \cite{ref40}.
-Encoding these raster pages into the WebP format—which utilizes intra-frame predictive coding from the VP8 video codec—achieves 30\% higher compression efficiency than JPEG while preserving crisp textual legibility \cite{ref39}.
+Spatial collision detection between rectangular layout entities is governed by the Axis-Aligned Bounding Box (AABB) intersection theorem, an orthogonal realization of the Hyperplane Separation Theorem.
+Two axis-aligned rectangles in two-dimensional Euclidean space intersect if and only if their projections overlap simultaneously along both horizontal and vertical coordinate axes.
+The area of mutual overlap corresponds to the product of the positive dimensional intersections, establishing the formal geometric basis for obstacle collision detection and spatial overlap quantification \cite{docxa1}.
 
-\subsection{FastAPI}
+To model spatial clearance on complex document pages containing dozens of fragmented text rows and irregular visual marks, continuous page space is discretized into a uniform two-dimensional occupancy grid.
+Continuous Cartesian coordinates map deterministically to discrete matrix cells through uniform spatial quantization.
+Furthermore, to accommodate visual bleed, character descenders, and scanning skew, obstacle geometries are expanded prior to discretization through isotropic boundary dilation, corresponding to a mathematical Minkowski sum with a square structuring element that establishes an inviolable spatial clearance buffer around occupied content.
 
-FastAPI is a modern, high-performance web framework designed for building asynchronous application programming interfaces (APIs) in Python, built upon Starlette and Pydantic \cite{ref54}.
-The architecture operates on the Asynchronous Server Gateway Interface (ASGI) standard, which implements non-blocking event-driven concurrency through cooperative multitasking and native coroutines (PEP 492).
-Traditional synchronous web servers allocate dedicated operating system threads per request, inducing heavy context-switching overhead and memory thrashing when handling long-lived document streams; in contrast, ASGI event loops manage thousands of concurrent requests across lightweight coroutines within a single process.
-Crucially for document intelligence pipelines, FastAPI leverages Python's native C-buffer protocol (\texttt{PyBuffer}) and memoryviews, enabling zero-copy shared memory data transfers between the web routing layer, machine learning execution providers (such as the ONNX Runtime CPU), and low-level C graphics engines (such as PyMuPDF) without crossing serialization boundaries or exhausting heap limits \cite{ref54}.
+Quantifying the available clearance from any candidate position to neighboring obstacles requires computing a spatial distance field across the discretized domain.
+The Euclidean Distance Transform (EDT) assigns each cell in an occupancy grid a scalar value representing its shortest Euclidean distance to the nearest obstacle boundary.
+While brute-force distance evaluation across a discrete grid incurs quadratic computational complexity, exact two-dimensional Euclidean distance transforms are computed in linear time proportional to the total number of grid cells using the dimensional decomposition algorithm developed by Felzenszwalb and Huttenlocher \cite{ref57}.
+By decomposing the two-dimensional distance calculation into independent one-dimensional parabolic lower-envelope operations executed sequentially along grid rows and columns, the complete clearance field is generated with deterministic linear-time complexity, enabling real-time spatial clearance queries on non-accelerated computing hardware.
 
-\subsection{NGINX}
+In spatial optimization algorithms, identifying optimal placement coordinates across candidate margin envelopes is modeled through multi-objective penalty evaluation balancing obstacle avoidance against margin alignment.
+To enforce strict collision avoidance over secondary aesthetic criteria, penalty functions employ dominant magnitude weighting: penalizing obstacle intersections by an order of magnitude significantly higher than clearance proximity establishes a strict lexicographical optimization hierarchy, guaranteeing that any collision-free coordinate candidate strictly dominates over overlapping positions.
 
-NGINX is an asynchronous, high-throughput web server, reverse proxy, and load balancer designed around an event-driven Reactor architecture \cite{ref58}.
-Rather than spawning an operating system process or thread per connection---an approach that scales memory consumption linearly with concurrent clients $\mathcal{O}(N)$---NGINX utilizes non-blocking I/O multiplexing primitives (specifically the \texttt{epoll} system call in Linux kernels) to manage tens of thousands of simultaneous socket connections within a fixed, constant memory envelope $\mathcal{O}(1)$ \cite{ref58}.
-Operating as a reverse proxy gateway, NGINX mediates between external client networks and internal application runtimes, offloading slow-client socket buffering and serving static pre-rendered assets directly from kernel memory.
-Furthermore, NGINX executes cryptographic termination for Transport Layer Security (TLS 1.3 / RFC 8446), negotiating modern authenticated encryption with associated data (AEAD: AES-256-GCM and ChaCha20-Poly1305) and ephemeral elliptic-curve Diffie-Hellman key exchanges (ECDHE) to protect data in transit across local area networks while isolating backend loopback daemons from external attack surfaces.
+While continuous geometric algorithms (such as the Maximal Empty Rectangle approach) and spatial hierarchical index trees (such as Quadtrees and R-trees) provide alternative spatial partitioning mechanisms, they exhibit non-deterministic pointer-traversal latency and performance degradation when processing fragmented document topologies.
+Discretized occupancy grids coupled with linear-time distance transforms provide constant cache locality, bounded memory consumption, and deterministic execution times, establishing a predictable architectural foundation for edge-based document finishing pipelines.
 
 \subsection{Public Key Cryptography and Digital Signatures}
 
@@ -161,9 +228,24 @@ Standardized under NIST FIPS PUB 180-4 \cite{ref43}, the Secure Hash Algorithm-2
 
 \subsection{Dual-Track Document Architecture}
 
-In secure document engineering, dual-track architectures resolve the inherent engineering tension between visual presentation requirements and cryptographic integrity constraints by producing decoupled, dual-purpose digital artifacts from a single source corpus \cite{ref42, ref45}.
-Public procurement and legal evidentiary workflows impose conflicting mandates: visual examination requires uniform page dimensions, sequential pagination, and visible endorsement stamps, whereas evidentiary verification demands untouched binary bytes and valid cryptographic signature chains.
-Decoupling the output pipeline into specialized presentation tracks (A4-normalized, CTM-flattened visual packages for printing and inspection) and evidentiary archive tracks (untouched binary containers with intact PKCS\#7 signatures and SHA-256 verification manifests) reconciles these orthogonal requirements without compromising either standard \cite{ref45}.
+In secure document engineering, dual-track architectures resolve the fundamental engineering tension between visual presentation requirements and cryptographic integrity constraints by producing decoupled, dual-purpose digital artifacts from a single source corpus \cite{ref42, ref45}.
+Public procurement during the transitory implementation of Republic Act No. 12009 (GPPB Circular No. 01-2025) operates in a hybrid administrative state that imposes conflicting mandates: physical Bids and Awards Committee (BAC) preliminary examination requires uniform page dimensions, sequential pagination, and visible endorsement stamps, whereas electronic bidding (PhilGEPS e-Bidding) demands untouched binary streams with intact Public Key Infrastructure (PKI) digital signatures.
+Under the ISO 32000-1 specification and Cryptographic Message Syntax (PKCS\#7 / CMS), a digital signature relies on an embedded /ByteRange dictionary that calculates an encrypted SHA-256 digest over the exact binary bytes of the source file \cite{ref12, ref41}.
+Any downstream visual modification---including page scaling, orientation normalization, sequential pagination, or annotation flattening (evaluating the Current Transformation Matrix to serialize visual annotations into the primary /Contents stream)---inevitably alters file byte offsets, invalidating the /ByteRange hash digest.
+The dual-track architecture resolves this conflict by separating the output pipeline into two functionally specialized pathways:
+
+\begin{enumerate}
+    \item \textbf{Track 1 (Master Print Bidding Document):} A visual synthesis pipeline that normalizes page geometries to standard ISO A4 dimensions, applies sequential BAC pagination, and flattens compliance stamps directly into the primary content stream.
+    Track 1 intentionally mutates the visual layer to generate a uniform, standardized binder designed exclusively for physical printing, manual binding, and physical sealed-envelope evaluation.
+    In this physical medium, automated cryptographic signature validation cannot be executed, as paper media cannot preserve dynamic binary bitstreams, private-key cryptographic bindings, or interactive certificate verification chains (NIST FIPS 186-5).
+    Under statutory physical evaluation guidelines (RA 12009), preliminary bid examination assesses visual completeness and authorized markings, whereas digital evidentiary non-repudiation remains cryptographically anchored to the native electronic container in Track 2.
+    \item \textbf{Track 2 (Evidentiary Archive Container):} An electronic preservation pipeline that completely bypasses visual stream flattening, geometric transformation, and annotation baking.
+    Track 2 ingests the prospective bidder's original digital PDF instruments and packages them as 100\% unaltered binary streams into an uncompressed ZIP container.
+    Because Track 2 performs zero byte-level manipulations, all embedded PKCS\#7 digital signature dictionaries, root-to-leaf X.509 public key certificate chains (including Philippine National PKI -- PNPKI credentials), and cryptographic timestamps remain byte-for-byte intact and mathematically verifiable under Republic Act No. 8792 (Electronic Commerce Act of 2000) and Supreme Court Administrative Matter No. 01-7-01-SC (Rules on Electronic Evidence) \cite{ref10, ref11}.
+\end{enumerate}
+
+To establish evidentiary provenance between both tracks, the compilation engine generates an immutable \texttt{manifest.json} audit ledger.
+This ledger cryptographically binds the master SHA-256 digest of the Track 1 print dossier to the individual SHA-256 digests and page mappings of every unaltered Track 2 source file, providing verifiable non-repudiation for e-procurement audits without altering or compromising original digital certificates.
 
 \subsection{Statutory Compliance Constraints and Legal Informatics in Public Procurement Systems}
 
@@ -229,7 +311,7 @@ These locations can also serve as obstacles in the stamp-placement stage, so tha
 
 The study additionally supports the choice of YOLOv8.
 Its small variant was close to the most accurate model while being among the fastest, so it offers a favourable balance between accuracy and cost.
-The reference work addresses a single object type, whereas the present study will extend detection to multiple classes, covering signatures, seals, dates, and other structural elements of bidding documents.
+The reference work addresses a single object type, whereas the present study will extend detection to multiple classes, covering Signature\_Block, Official\_Seals, Table\_Grid, and Text\_Paragraph.
 
 \subsection{Enhancing Document Layout Analysis through Diverse Synthetic Data and Adaptive Perception}
 
@@ -251,7 +333,7 @@ While Sugiharto et al. (2023) demonstrated the viability of custom Label Studio 
 Zhao et al. (2024) pre-training on DocSynth-300K improved mAP by 1.2 (DLA) and 2.6 (DocLayNet) points over the same detector trained without it.
 Accordingly, the present study adopts a two-stage transfer learning approach: rather than training YOLOv8 from generic natural-image weights (COCO) or from scratch, the detector will be initialized from weights pre-trained on document layouts before being fine-tuned on labeled procurement documents.
 Furthermore, Zhao et al.'s bin-packing approach provides a sound basis for generating synthetic bidding pages using standard procurement templates should real-world training samples prove limited.
-The present study diverges from Zhao et al. by utilizing standard YOLOv8s rather than the modified GL-CRM YOLOv10m backbone, prioritizing lower architectural complexity and ease of local deployment on standard computing hardware, while handling skew through an explicit upstream deskewing module  \cite{ref50}.
+The present study diverges from Zhao et al. by utilizing standard YOLOv8s rather than the modified GL-CRM YOLOv10m backbone, prioritizing lower architectural complexity and ease of local deployment on standard computing hardware, while handling skew through an explicit upstream deskewing module \cite{ref50}.
 
 \subsection{Unveiling Document Structures with YOLOv5 Layout Detection}
 
@@ -274,12 +356,12 @@ The same sequence will be followed: document pages are collected, regions are an
 As in Sugiharto et al. (2023), the meaning of each region will be encoded in the detector's class predictions instead of being inferred afterwards \cite{ref51}.
 
 The present study differs in how the detector is prepared.
-Instead of training from scratch on a small self-collected corpus alone—an approach prone to poor generalization on complex layouts—the detector will be initialized from an established model checkpoint pre-trained on DocLayNet (Pfitzmann et al., 2022), a human-annotated collection of 80,863 pages that includes government tenders among its document types.
+Instead of training from scratch on a small self-collected corpus alone---an approach prone to poor generalization on complex layouts---the detector will be initialized from an established model checkpoint pre-trained on DocLayNet (Pfitzmann et al., 2022), a human-annotated collection of 80,863 pages that includes government tenders among its document types.
 This pre-trained checkpoint serves as the baseline, as its convolutional layers have already learned generalized visual representations of page typography, margins, text blocks, titles, tables, and headers.
 Starting from an existing document-layout checkpoint before fine-tuning is consistent with the document-specific pre-training principle reported by Zhao et al. (2024), although their pre-training used a synthetic corpus rather than DocLayNet.
 Whether a DocLayNet-pretrained checkpoint benefits bidding documents is itself tested here by comparing the baseline and fine-tuned models.
 This baseline will then be fine-tuned on actual Philippine Bidding Documents annotated by the researchers in Label Studio.
-The classes for fine-tuning will correspond directly to the domain-specific structures required to verify bid submissions—such as authorized signature blocks, notary seals, and statutory title headers—which generic document benchmarks do not label.
+The classes for fine-tuning will correspond directly to the domain-specific structures required to verify bid submissions---such as Signature\_Block, Official\_Seals, Table\_Grid, and Text\_Paragraph---which generic document benchmarks do not label.
 The documents will be used as they are received, including photocopies and scans with minor noise, so that the detector is trained under practical deployment conditions.
 Comparing the generic baseline directly against the fine-tuned model on the same held-out bidding pages will quantify the specific empirical contribution of the custom fine-tuning stage.
 
@@ -309,7 +391,7 @@ As demonstrated by Bento et al. (2025), single-stage YOLO detectors remain robus
 Furthermore, rather than relying on legacy Tesseract 4.0—whose rigid line-finding mechanism degrades when text rows are slightly inclined—the proposed architecture employs RapidOCR (DBNet++ and SVTR).
 The Differentiable Binarization (DBNet++) detection head natively isolates multi-oriented, arbitrary-angled text polygon proposal strips directly in memory, which are subsequently cropped and normalized for SVTR character recognition without intermediate disk rasterization or full-page bitmap deskewing \cite{ref52}.
 
-Finally, to resolve macro-orientation disparities—such as landscape-oriented financial statements, engineering drawings, and rotated municipal permits—the platform avoids destructive raster rotation altogether.
+Finally, to resolve macro-orientation disparities---such as landscape-oriented financial statements, engineering drawings, and rotated municipal permits---the platform avoids destructive raster rotation altogether.
 Instead, the system leverages the ISO 32000 Coordinate Transformation Matrix (CTM) during Track 1 compilation, applying 3 x 3 affine transformation operators ([a, b, c, d, e, f]) to normalize page geometries to uniform A4 portrait dimensions and permanently bake non-occluding stamps in sub-millisecond execution time on commodity multi-core CPUs.
 Documents exhibiting extreme physical damage or scanning skew exceeding autonomous confidence thresholds are routed to the interactive staging workspace for human-in-the-loop verification, ensuring rigorous compliance without introducing unhandled pipeline exceptions.
 
@@ -343,3 +425,85 @@ Second, custom deterministic parameters will be defined specifically for verifyi
 Rather than attempting open-ended semantic parsing of all commercial permits across diverse external agencies, the compliance engine evaluates these extracted marks against explicit GPPB procedural rules to verify that required jurats and affidavits are properly executed, directly mitigating procedural disqualification risks under the non-discretionary pass/fail standard.
 Third, the study focuses on complex Philippine Bidding Documents instead of commercial retail receipts.
 While receipts do appear within bid packages (such as proof of purchase for bidding documents), the proposed system handles the broader, multi-layout documentation mandated in public procurement.
+
+\subsection{Approximate String Matching for Detecting Keywords in Scanned Business Documents}
+\label{sec:related_ha_matching}
+
+Ha (2019) studied how required keywords can be located in scanned business documents when OCR errors defeat exact matching.
+Business documents such as invoices carry a predefined set of data fields that are identified by keywords, so locating those keywords is a precondition for reading the fields.
+The evaluation used 50 scanned Czech invoices.
+After an open-source OCR engine produced the text, keywords for 36 fields, among them invoice number, invoice date, order number, due date, and payment date, were searched.
+The keywords ranged from one to 43 characters.
+A second module matched the same keywords exactly with regular expressions for comparison \cite{docxb1}.
+
+The method was approximate string matching with a weighted edit distance.
+In the standard Levenshtein distance, insertion, deletion, and substitution each cost 1.
+Ha reduced the cost to 0.1 for substitutions between characters that OCR commonly confuses, such as O and 0, l and 1, s and 5, z and 2, and m and n, and for inserting or deleting spaces and punctuation, while all other edits kept a cost of 1.
+The search used a filter.
+It first found the longest common substring of the keyword and the text and rejected the candidate if that substring covered less than a third of the keyword.
+It then extended the substring to the one with the smallest ordinary edit distance, and only then computed the slower weighted distance.
+A match was accepted when the weighted distance divided by the keyword length did not exceed an error ratio of 0.15 \cite{docxb1}.
+
+The evaluation counted the keywords that approximate matching found and exact matching missed.
+There were 171.
+Of these, 30.4\% were caused by single-character OCR errors, 18.7\% by missing or extra diacritics, 25.7\% by different word endings in the inflected language, and 25.1\% were false positives caused by keywords that lie very close to one another.
+In one example, the title ``Da\v{n}ov\'y doklad'' was accepted as the keyword ``Da\v{n}ov\'y doklad \v{c}'', which differs by one space and one character.
+A further 20 keywords containing OCR errors remained undetected because their errors were not in the list of common confusions.
+The study has limitations.
+It reports only the additional detections and gives no precision or recall, the dataset is small, and part of the result depends on Czech diacritics and inflection.
+The author listed a complete confusion list and a finite-state automaton implementation as future work \cite{docxb1}.
+
+This study is relevant to the checklist matching of the present system.
+The title term and keyword term of the compatibility score in Section~\ref{sec:checklist_matching} rely on normalized Levenshtein similarity because OCR errors would defeat exact matching, and the recovery of keywords missed by exact matching supports that choice.
+Unweighted Levenshtein distance, however, charges a common OCR confusion the same as a genuinely different character.
+A valid credential with minor scan noise could therefore fall below the acceptance threshold ($\tau = 0.65$) and be reported as a Missing Document Defect.
+Ha's reduced costs for common confusion pairs are a way to tolerate such errors, and the present study will compare the plain and weighted variants against exact matching in the checklist test.
+Ha's error ratio of 0.15, equivalent to a similarity of 0.85, also gives a reference for the keyword threshold of 0.80, which will be tuned on the validation split.
+Ha computes the weighted distance only in the final step because it is slower, which keeps the cost low on a CPU \cite{docxb1}.
+
+The present study differs in how the search is guided.
+Ha searched the OCR text of the entire invoice, with no knowledge of layout, and a quarter of the additional detections were false positives between near-identical keywords.
+In the present system, the YOLOv8 detector first localizes the Signature\_Block, Official\_Seal, Table\_Grid, and Text\_Paragraph regions, and OCR is applied to the text regions.
+The compatibility score also includes a layout evidence term, the Hungarian algorithm allows each document to fill only one checklist slot, and near-ties are flagged for operator review.
+These measures reduce, but do not remove, confusion between similar checklist titles.
+The reference work only detects keywords, while the present study keeps dates and other values on exact regular expressions with format validation, since a fuzzy match could accept a date that differs by one digit.
+The documents are English-language Philippine bidding documents, so the diacritic and inflection results do not apply, and the present study will report pair precision, recall, and F1 with a statistical comparison against baselines \cite{docxa1}.
+
+\subsection{A Comparative Study on Automated Expiry Date Extraction from Official Documents Using OCR and Image Preprocessing}
+\label{sec:related_expiry_date}
+
+T\"urkmen, Bayram, \c{C}ay, and G\"okda\u{g} (2025) compared OCR engines and image preprocessing techniques for extracting expiry dates from official administrative documents, motivated by the cost and error rate of recording such dates manually at a logistics company.
+The corpus contained 1,000 documents in PDF and JPEG format from a single company's records, including vehicle insurance policies, driver's licenses, identity cards, health and liability insurance documents, psychotechnical evaluation reports, vehicle inspection certificates, and a cargo operating certificate.
+The images were scanned or photographed under varying lighting, contrast, noise, and distance, and some were rotated.
+The authors note that expiry dates may be partially obscured by stamps and seals.
+Each document was manually annotated with its true expiry date \cite{docxb2}.
+
+Three OCR engines were tested: SuryaOCR, which uses EfficientViT-based text detection and Donut-based recognition; EasyOCR, which uses a convolutional network with LSTM layers and a CTC decoder; and Pytesseract, a wrapper for the classical Tesseract engine.
+Each engine was combined with ten preprocessing techniques applied in isolation: raw input, grayscale conversion, fixed binary thresholding, adaptive thresholding, contrast enhancement, sharpening, noise reduction, Otsu thresholding, morphological operations, and deskewing.
+The recognized text was parsed by more than fifteen regular expressions covering slash, dot, dash, and ISO formats and written month names in Turkish and English, with variants for omitted leading zeros and mixed separators.
+All candidates were converted to dates, and the latest valid date was taken as the expiry.
+If no date was found, the image was rotated by 90$^\circ$, 180$^\circ$, and 270$^\circ$ and read again.
+A prediction counted as correct only if the day, month, and year matched the annotation exactly \cite{docxb2}.
+
+SuryaOCR on raw images achieved the highest accuracy at 66.1\%, followed by EasyOCR at 53.3\% and Pytesseract at 36.5\%.
+Preprocessing generally reduced accuracy for all engines.
+Adaptive thresholding reduced SuryaOCR to 25.3\%, EasyOCR to 13.2\%, and Pytesseract to 6.6\%, and Otsu thresholding and morphological operations reduced SuryaOCR to 43.1\% and 42.4\%.
+Deskewing also lowered accuracy, from 66.1\% to 52.8\% for SuryaOCR.
+The authors concluded that preprocessing can distort the features of documents that are already clean and structured.
+Their error analysis found partially recognized dates, the selection of unrelated dates such as print or issuance dates when several dates were equally prominent, and degraded images with blur, shadows, or low resolution, in some cases leaving the expiry date illegible even to the human annotators.
+The ground truth held only one date per document, the preprocessing parameters were fixed, and processing time was not reported.
+The authors proposed classifying the document before OCR, filtering by region, using keywords such as ``Valid Until'' to choose among dates, scoring confidence, and alerting human reviewers when no valid date is found \cite{docxb2}.
+
+This study is relevant because it combines the stages the present system uses for dates: OCR of official documents containing stamps and seals, deterministic regular expressions, and exact-match scoring, which corresponds to the exact-match and CER evaluation of dates.
+Its set of date patterns, including written months, is a tested starting point for the date rules for the credentials in The Nest and the execution pages.
+The patterns can be extended to the written wording typical of Philippine affidavits, such as ``this fifth day of March 2026''.
+The finding that preprocessing lowered accuracy supports the decision to pass unbinarized crops to RapidOCR, without binarization or morphological filtering, although the authors did not test RapidOCR, so the present study will verify this on its own documents.
+Its proposed remedies, namely classification before OCR, keyword disambiguation, region filtering, confidence scoring, and a human fallback, correspond to the classification module, the anchor phrases, the detector-guided regions, the warning flags, and the human-in-the-loop workspace of the present system \cite{docxb2}.
+
+The present study resolves the main weakness of the reference work.
+Taking the chronologically latest date fails on sworn affidavits such as the Omnibus Sworn Statement and the Bid Securing Declaration, because a notary's commission expiry (for example, a commission valid until December 31, 2026) is later than the execution date, and it would replace it.
+The present system instead restricts date extraction to the detected text region that carries the execution or jurat wording and ties it to statutory anchor phrases, such as ``Subscribed and sworn to before me'', and then compares it with the tender opening schedule.
+A date that cannot be read or validated is flagged for operator review, not passed.
+The reference work lists occlusion by stamps and seals as a challenge but does not measure it, and the present study does not claim to remove it.
+It reports the date accuracy and flags unreadable cases.
+The OCR engine is RapidOCR on a CPU, whereas the reference work evaluated a transformer.

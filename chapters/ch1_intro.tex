@@ -2,6 +2,7 @@
 \label{ch:introduction}
 
 \section{Background of the Study}
+\label{sec:background_of_study}
 Public bidding is the principal process through which Philippine government agencies procure goods, infrastructure projects, and consulting services.
 Through competitive bidding, it aims to secure value for public funds while enforcing transparency and accountability in the disbursement of public resources.
 By standardizing procurement protocols and requiring documentary proof of eligibility, the process establishes a merit-based structure through which private enterprises gain access to government contracts.
@@ -51,6 +52,7 @@ Furthermore, by projecting detected layout bounding boxes as spatial obstacles w
 This study will develop a privacy-preserving bid compliance audit and document preparation framework for Philippine public procurement, combining computer vision-based document extraction, parameter-based compliance auditing, and spatially aware document assembly, operating entirely on local infrastructure.
 
 \section{Statement of the Problem}
+\label{sec:statement_of_problem}
 Bid preparation requires the manual compilation, formatting, and verification of multi-hundred-page compliance documents under fixed submission deadlines and a non-discretionary pass/fail standard that admits no clerical discretion.
 As established above, existing tools do not close this gap: mechanical PDF utilities lack the semantic awareness to verify statutory validity or detect template drift, and cloud-based language models that do possess this capability expose the bidder to open-ended liability under the Data Privacy Act of 2012.
 Sustained verification of highly repetitive documentary requirements is precisely the task at which human review is least reliable, and the cost of a single lapse is total.
@@ -68,6 +70,7 @@ There is accordingly a need to investigate the architectural design, feasibility
 Specifically, there is a need to establish the accuracy of structural element extraction under practical document conditions, the completeness and currency of the compliance parameters against actual GPPB requirements, and the extent to which such a system can reduce reliance on manual verification without introducing new, less visible points of failure.
 
 \section{Significance of the Study}
+\label{sec:significance_of_study}
 This study contributes to the fields of intelligent document processing (IDP) and public procurement informatics by introducing an edge-deployable, vision-centric document intelligence framework that couples deep computer vision layout analysis with targeted optical character recognition (OCR) and deterministic statutory compliance engines.
 The integration of semantic layout segmentation and automated visual defect detection addresses the fundamental limitations of standard PDF processing tools, which apply stamps at fixed coordinates regardless of page content—frequently obscuring vital text on mixed-layout and scanned pages, and failing to detect non-textual legal marks under Philippine procurement laws (Republic Act No. 9184 \cite{ref1} and Republic Act No. 12009 \cite{ref2}).
 
@@ -86,27 +89,27 @@ In contrast, this study closes the loop from perception to production by couplin
 Furthermore, while conventional document assembly tools achieve visual uniformity by flattening pages, an operation that strips embedded cryptographic certificates and invalidates legal digital signatures this research introduces a dual-track architectural model that preserves the evidentiary non-repudiation of digitally signed instruments under the Electronic Commerce Act of 2000 (Republic Act No. 8792) \cite{ref10} while concurrently producing standardized physical bidding documents.
 
 \section{Objectives}
-\subsection*{Main Objective}
+\label{sec:objectives}
 The main objective of this study is to design, implement, and evaluate an offline, edge-deployable document intelligence and compliance verification framework for Philippine public procurement under Republic Act No. 9184 \cite{ref1} and Republic Act No. 12009 \cite{ref2} that automates document classification, visual defect verification, statutory sequencing, and dynamic obstacle-free stamp placement on commodity computing infrastructure. Specifically, this study aims to:
 
-\subsection*{Specific Objectives}
 \noindent\textbf{A.} Curate and annotate a domain-specific benchmark dataset of Philippine Bidding Documents (PBDs) encompassing both native digital files and scanned photocopies across core functional document layout regions to serve as the training and evaluation corpus.
 
-\noindent\textbf{B.} Design and optimize an edge-deployable deep vision document layout segmentation model paired with a dynamic obstacle-avoidance algorithm that calculates collision-free stamp placement coordinates within statutory document margins without occluding existing document elements.
+\noindent\textbf{B.} Develop an interactive local workspace interface that enables users to stage multi-file submissions, inspect detected layout regions and compliance flags, review automated stamp placements, and manually adjust document arrangements.
 
-\noindent\textbf{C.} Develop an automated document classification module capable of identifying and categorizing incoming bidding documents based on visual, structural, and textual content features, independent of file naming conventions.
+\noindent\textbf{C.} Design and optimize an edge-deployable deep vision document layout segmentation model paired with targeted text extraction to identify macroscopic document regions and dynamically calculate collision-free stamp placement coordinates within statutory margins without occluding existing document elements.
 
-\noindent\textbf{D.} Implement an automated pre-flight compliance inspection pipeline that analyzes document execution pages of mandatory statutory affidavits and submission forms (such as the Omnibus Sworn Statement and Bid Securing Declaration) to verify the presence of mandatory formal marks—including authorized signatures and official seals—to mitigate procedural disqualification risks.
+\noindent\textbf{D.} Develop an automated document classification module capable of categorizing heterogeneous public procurement instruments based on multimodal visual layout and textual content features, independent of file naming conventions.
 
-\noindent\textbf{E.} Construct a statutory compliance rule engine that extracts mandatory tender checklist requirements and automatically organizes heterogeneous bidder submissions into the prescribed regulatory sequence mandated by procurement authorities.
+\noindent\textbf{E.} Construct a deterministic statutory compliance engine that extracts mandatory tender checklist requirements and evaluates document packages against regulatory procurement rules to verify completeness and enforce prescribed document sequencing.
 
-\noindent\textbf{F.} Develop an interactive local workspace interface that enables users to stage multi-file submissions, inspect detected layout regions and compliance flags, review automated stamp placements, and manually adjust document arrangements.
+\noindent\textbf{F.} Implement an automated pre-flight compliance inspection pipeline that audits the assembled submission package prior to final output—evaluating checklist completeness, document sequencing, affidavit execution marks (authorized signatures and notary seals), document expiration dates, and stamp placement clearances—and flags all identified compliance defects to prevent summary procedural disqualification.
 
-\noindent\textbf{G.} *Incorporate a dual-output document packaging pipeline that generates a standardized, print-ready submission package for physical evaluation, while concurrently generating an evidentiary container of unaltered digital source files to preserve cryptographic signature integrity for electronic bidding compliance.*
+\noindent\textbf{G.} Implement a dual-output document packaging pipeline that generates a standardized, print-ready submission package for physical evaluation, while concurrently generating an evidentiary container of unaltered digital source files to preserve cryptographic signature integrity for electronic bidding compliance.
 
-\noindent\textbf{H.} *Conduct an empirical evaluation of the integrated system measuring document layout segmentation accuracy, stamp obstacle-avoidance success rates, execution latency on commodity hardware, and end-to-end preparation turnaround time relative to manual collation.*
+\noindent\textbf{H.} Empirically evaluate system performance by quantifying document layout segmentation accuracy, zero-collision stamp placement rates, system usability, end-to-end turnaround time relative to manual preparation, and the mean per-page processing time (in seconds) under concurrent quantized YOLOv8 ONNX and RapidOCR execution on target hardware.
 
 \section{Scope and Delimitations}
+\label{sec:scope_and_delimitations}
 This study focuses on the design, architectural implementation, and empirical evaluation of an offline, edge-deployable document intelligence and compliance verification system specifically tailored for public procurement workflows governed by Republic Act No. 9184 and Republic Act No. 12009.
 The framework is restricted to processing Philippine Bidding Documents (PBDs) across standard competitive bidding categories, including Goods, Infrastructure Projects, and Consulting Services.
 

@@ -3,17 +3,20 @@
 
 \section{System Model}
 \label{sec:system_model}
+\renewcommand{\thefigure}{\thesection.\arabic{figure}}
+\renewcommand{\thetable}{\thesection.\arabic{table}}
+\setcounter{figure}{0}
 
 The system is designed as an offline, edge-deployable document intelligence and compliance verification platform for Philippine public procurement workflows under Republic Act No. 9184 \cite{ref1} and Republic Act No. 12009 \cite{ref2}.
 Operating within an on-premise local server environment (Ubuntu 22.04/24.04 LTS), the platform processes heterogeneous multi-file bidder submissions to generate a unified, compliant, print-ready document package alongside a parallel digital evidentiary portfolio.
 The system architecture enforces a multi-tier local processing pipeline orchestrated via NGINX \cite{ref58} reverse proxy routing, FastAPI \cite{ref54} asynchronous microservices, PostgreSQL \cite{ref55} asset repositories, and client-side single-page applications built on React 19, Tailwind CSS, and Framer Motion.
-Figure 3.1.1 illustrates the structural data flow and component layout across the local architecture.
+Figure~\ref{fig:system_model} illustrates the structural data flow and component layout across the proposed local architecture.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.95\textwidth]{{figures/Figure 3.1}.png}
-\caption*{\textbf{Figure 3.1.1}}
-\label{fig_methodology_3_1_1}
+\caption{System Model Block Diagram}
+\label{fig:system_model}
 \end{figure}
 
 \subsection{Authentication Perimeter \& Access Control Gate}
@@ -26,6 +29,7 @@ To protect bidding data from unauthorized access across shared organizational wo
 Authorized sessions inject verified user and tenant scopes into downstream database operations, guaranteeing complete workspace boundary isolation.
 
 \subsection{User Ingestion Channels (Channel A \& Channel B)}
+\label{sec:ingestion_channels}
 The system decouples tender onboarding into two distinct ingestion pathways that separate procedural regulatory requirements from project-specific document payloads:
 
 \textbf{Channel A (Tender Checklist Ingestion):} Dedicated to ingesting the procuring entity's official Section VIII (Checklist of Technical and Financial Documents) provided in PDF or DOCX format in accordance with standard Philippine Bidding Documents (PBDs) \cite{ref46}.
@@ -34,21 +38,24 @@ Ingesting this document serves as the regulatory context trigger for the entire 
 \textbf{Channel B (Project Files Ingestion):} Dedicated to the direct user upload of project-specific, non-recurring instruments---such as the project-titled Bid Form, Bill of Quantities (BOQ), and freshly executed affidavits (Omnibus Sworn Statement and Bid Securing Declaration)---dropping them directly into matching checklist slots within the staging interface \cite{ref12}.
 
 \subsection{Checklist Parser \& Matcher Engine}
-The Checklist Parser and Matcher Engine automates the translation of unstructured procurement instructions into machine-readable compliance slots.
-Tender checklists published by government agencies vary across procuring entities but strictly follow the statutory categories mandated by the Government Procurement Policy Board (GPPB) \cite{ref46}.
+\label{sec:checklist_parser}
+The Checklist Parser and Matcher Engine translates the procuring entity's tender checklist into structured requirements and matches bidder documents to the corresponding submission slots. It provides the basis for identifying missing attachments and verifying the arrangement of documents against the checklist.
 
-Upon receiving the Channel A document, the parser executes high-speed text extraction via PyMuPDF C-bindings \cite{ref40} and evaluates the textual stream using Deterministic Finite Automaton (DFA) regular expressions rooted in formal language theory \cite{ref25, ref26}.
-The engine compiles statutory anchor patterns to identify standard legal section headings, Class "A" and Class "B" eligibility divisions, and itemized compliance clauses in linear processing time without the computational latency or hallucination risks associated with generative language models \cite{ref25}.
-It constructs a structured JSON representation of the tender's requirements (\texttt{checklist\_state}), assigning a unique slot index, required document category (Legal, Technical, or Financial), and keyword profile to each mandated attachment.
-This structured slot index is immediately forwarded to The Nest to initiate automated asset retrieval.
+Upon receiving the Channel A checklist, the parser extracts available text from native digital documents using PyMuPDF \cite{ref40}. If the checklist consists of scanned pages without a usable text layer, the pages are routed through RapidOCR before parsing. The resulting text is examined using regular expressions and heading patterns to identify checklist categories, requirement titles, and itemized clauses \cite{ref25,ref26}. These extracted requirements are recorded in a structured checklist representation (\texttt{checklist\_state}).
+
+Each checklist requirement contains an official title, a set of relevant keywords, expected document layout classes, a mandatory status, and an expected document count. Most requirements correspond to one submission slot. For the ongoing-contracts requirement, the count is derived from the bidder's Statement of All Ongoing Contracts and determines the number of slots associated with that entry. The structured checklist is also used to retrieve potentially relevant recurring credentials from The Nest.
+
+For document-to-checklist matching, the engine compares the extracted titles and keywords of each document unit with the recorded requirements. It uses OCR-aware weighted edit similarity to account for selected character confusions, such as letters being recognized as visually similar numerals \cite{docxb1}. Textual similarity is combined with evidence from the layout classes detected on the document, producing a compatibility score for each document--requirement pair.
+
+The matcher evaluates these scores through a one-to-one assignment process, ensuring that each document unit fills at most one slot and each slot accepts at most one unit. Mandatory slots without an accepted match are flagged as potentially missing, while unmatched document units are reported as extraneous submissions. Accepted matches with similar competing scores are flagged for operator review. The resulting slot assignments also support sequence verification and the proposed arrangement of documents according to the tender checklist.
 
 \subsection{The Nest (Company Asset Archive)}
 The Company Asset Archive, designated within the platform as "The Nest," serves as the persistent, local storage subsystem for recurring corporate eligibility credentials.
 In Philippine public procurement, prospective contractors are required to submit identical baseline legal and financial instruments across multiple independent bidding tenders, including local government Mayor's or Business Permits, Bureau of Internal Revenue (BIR) Tax Clearances, Department of Trade and Industry (DTI) or Securities and Exchange Commission (SEC) certificates, and Audited Financial Statements (AFS) \cite{ref1, ref46}.
 
 To eliminate repetitive manual searching and redundant disk uploads, The Nest maintains an encrypted local repository organized into multi-tier functional categories (\texttt{Legal/}, \texttt{Technical/}, \texttt{Financial/}, and \texttt{Brochures/}).
-When the Checklist Parser emits required tender slots, the system automatically scans The Nest, performs content-aware token matching against the extracted checklist requirements, and auto-hydrates matching files directly into their designated submission slots in the workspace (\texttt{[\textbackslash{}textbf{Attached from Nest}]}).
-Stored assets are evaluated for expiration dates and validity periods, displaying visual warning badges (\texttt{[\textbackslash{}textbf{WARNING: EXPIRED}]} or \texttt{[\textbackslash{}textbf{WARNING: MISSING}]}) to alert administrative personnel of compliance gaps before project staging proceeds.
+When the Checklist Parser emits required tender slots, the system automatically scans The Nest, performs content-aware token matching against the extracted checklist requirements, and auto-hydrates matching files directly into their designated submission slots in the workspace ([\ensuremath{\surd} Attached from Nest]).
+Stored assets are evaluated for expiration dates and validity periods, displaying visual warning badges ([\ensuremath{\triangle} EXPIRED] or [! MISSING]) to alert administrative personnel of compliance gaps before project staging proceeds.
 Master files residing in The Nest remain strictly read-only and immutable; all files are encrypted at rest using the AES-256-GCM authenticated cipher standard \cite{ref56} in local PostgreSQL storage \cite{ref55}.
 Project-specific annotations and compliance stamps are staged as isolated session overlays, ensuring that reusable corporate records are never corrupted across tender lifecycles.
 
@@ -76,13 +83,12 @@ For 100-page procurement packages exceeding 200 megabytes, this client-heavy arc
 
 The system replaces this paradigm through decoupled server-side rasterization and declarative vector overlays:
 
-\textbf{Server-Side PyMuPDF Rasterization:} High-performance C-libraries render requested PDF pages on the host workstation using native SIMD-accelerated graphics pipelines \cite{ref40}, streaming lightweight, compressed WebP bitmaps to standard client HTML <img> tags in under 15 milliseconds \cite{ref39}.
-Client memory footprint remains strictly flat at under 80 megabytes regardless of document volume.
+\textbf{Server-Side PyMuPDF Rasterization:} High-performance C-libraries render requested PDF pages on the host workstation using native SIMD-accelerated graphics pipelines \cite{ref40}, streaming lightweight, compressed WebP bitmaps to standard client HTML \texttt{<img>} tags in under 15 milliseconds \cite{ref39}. Client memory footprint remains strictly flat at under 80 megabytes regardless of document volume.
 
 \textbf{Framer Motion Declarative Vector Overlays:} Compliance stamps, defect inspection bounding boxes, and drag-and-drop handles are rendered directly within the browser's hardware-accelerated Document Object Model (DOM) using CSS transforms (transform: translate3d(...)) and Scalable Vector Graphics \cite{ref37, ref38}.
 Interactive repositioning executes at smooth 60 frames per second through React 19's virtual DOM reconciliation \cite{ref36} without intermediate canvas re-rasterization.
 
-Automated Checklist Sorter \& Staging Grid: Coordinates the slotted attachment grid, displaying auto-hydrated files from The Nest alongside ad-hoc uploads from Channel B, allowing manual drag-and-drop sequencing and document lockout toggles (isSigned = true).
+\textbf{Automated Checklist Sorter \& Staging Grid:} Coordinates the slotted attachment grid, displaying auto-hydrated files from The Nest alongside ad-hoc uploads from Channel B, allowing manual drag-and-drop sequencing and document lockout toggles (\texttt{isSigned = true}).
 
 \subsection{Nginx Reverse Proxy \& Secure Access Gateway}
 The Nginx Reverse Proxy functions as the front-facing security gateway bridging client browser workspaces with the backend processing runtime \cite{ref58}.
@@ -108,32 +114,50 @@ When structural corruption or permissions-encryption is detected, the file is au
 This automated repair ensures that complex bidding packages compile reliably without server crashes or manual intervention.
 
 \subsection{Stage 1: Deep Visual Perception (YOLOv8-Doc Layout Gatekeeper)}
-The Deep Visual Perception Engine serves as the macroscopic layout analyzer and first stage of the perception pipeline \cite{ref29, ref30}.
-Running on commodity multi-core processors via the ONNX Runtime CPU provider \cite{ref32, ref33}, a customized YOLOv8-Doc convolutional vision model detects four primary semantic layout classes---Signature\_Block, Official\_Seal, Table\_Grid, and Text\_Paragraph \cite{ref49}---in under 35 milliseconds per page without requiring a dedicated graphics accelerator.
+The Deep Visual Perception Engine serves as the macroscopic layout analyzer and first stage of the perception pipeline \cite{ref29,ref30}. Running on commodity multi-core processors via the ONNX Runtime CPU provider \cite{ref32,ref33}, a customized YOLOv8-Doc convolutional vision model detects four primary semantic layout classes---Signature\_Block, Official\_Seal, Table\_Grid, and Text\_Paragraph \cite{ref49}---in under 35 milliseconds per page without requiring a dedicated graphics accelerator.
 
 To maximize processing efficiency and eliminate OCR character hallucinations, the engine acts as an architectural pre-filter ahead of text recognition.
 Non-text elements such as official notary dry seals, municipal stamps, and wet signatures bypass the OCR engine entirely and route directly to the Active Dodging obstacle map and statutory affidavit defect verification (confirming co-located signatures and seals on Omnibus Sworn Statements to prevent summary disqualification under RA 9184 \cite{ref1} and RA 12009 \cite{ref2}).
 Only validated text paragraph regions are cropped and forwarded to Stage 2, ensuring downstream lexical recognition operates strictly on clean text blocks.
 
 \subsection{Stage 2: Microscopic Text Recognition \& Lamination (RapidOCR)}
-The Text Recognition and Lamination Engine operates as the microscopic second stage of the perception pipeline, performing deep character extraction and document searchability lamination \cite{ref22}.
-Integrating RapidOCR with Differentiable Binarization (DBNet++) for text detection \cite{ref23} and a Single Visual Model for Text Recognition (SVTR) for sequence decoding \cite{ref24}, the engine processes the text crops dispatched by Stage 1 directly within shared C-memory buffers in under 25 milliseconds per page.
+The Text Recognition and Lamination Engine operates as the microscopic second stage of the perception pipeline, performing deep character extraction and document searchability lamination \cite{ref22}. Integrating RapidOCR with Differentiable Binarization (DBNet++) for text detection \cite{ref23} and a Single Visual Model for Text Recognition (SVTR) for sequence decoding \cite{ref24}, the engine processes the text crops dispatched by Stage 1 directly within shared C-memory buffers in under 25 milliseconds per page.
+
+\textbf{Unbinarized In-Memory Inference:} In administrative document processing, conventional OCR pipelines apply aggressive image binarization, morphological filtering, and full-page deskewing prior to recognition. However, recent empirical studies on official documents demonstrate that such pre-processing operations frequently degrade character recognition accuracy on structured documents, cutting extraction rates by more than half \cite{docxb2}. Consequently, the architecture routes raw, unbinarized pixel arrays directly from Stage 1 into the SVTR network within shared C-buffers, eliminating preprocessing degradation while bypassing intermediate disk rasterization bottlenecks.
 
 By evaluating only isolated text blocks rather than scanning full-page bitmaps, the engine eliminates background noise and reduces processing overhead:
 
-\textbf{Coordinate Remapping:} Local character coordinates $(x_{\text{local}}, y_{\text{local}})$ are translated back into global page space ($x_{\text{global}} = x_{\text{crop}} + x_{\text{local}}, y_{\text{global}} = y_{\text{crop}} + y_{\text{local}}$), preserving pixel-perfect alignment across the master PDF page.
+\textbf{Coordinate Remapping:} Local character coordinates $(x_{\mathrm{local}}, y_{\mathrm{local}})$ are translated back into global page space ($x_{\mathrm{global}} = x_{\mathrm{crop}} + x_{\mathrm{local}}$, $y_{\mathrm{global}} = y_{\mathrm{crop}} + y_{\mathrm{local}}$), preserving pixel-perfect alignment across the master PDF page.
 
-\textbf{Searchable PDF Lamination:} Character streams are laminated behind the scanned bitmap under ISO 32000-2 Text Rendering Mode 3 (\texttt{3 Tr}) \cite{ref13, ref18}, granting immediate in-browser searchability and dual-pane checklist verification while retaining 100\% of the authentic visual scan required for BAC bid evaluation.
+\textbf{Searchable PDF Lamination:} Character streams are laminated behind the scanned bitmap under ISO 32000-2 Text Rendering Mode 3 (\texttt{3 Tr}) \cite{ref13,ref18}, granting immediate in-browser searchability and dual-pane checklist verification while retaining 100\% of the authentic visual scan required for BAC bid evaluation.
 
-\textbf{Checklist Alignment:} Deterministic finite automaton (DFA) regular expressions evaluate statutory anchor terms (such as permit numbers, execution dates, and statutory headers) in linear time \cite{ref25, ref26} to link attached documents to mandatory Section VIII checklist slots without generative hallucination risks.
+\textbf{Context-Anchored Statutory Date \& Checklist Extraction:} To extract execution timestamps and verify certificate validity without the hallucination risks of generative language models, deterministic regular expressions evaluate statutory anchor terms in linear $O(n)$ time \cite{ref25,ref26}. While naive date parsers frequently misidentify irrelevant dates or notary commission expirations as document execution dates \cite{docxb2}, the engine restricts date extraction to the layout-localized jurat block, anchoring evaluation to mandatory statutory phrases (such as ``Subscribed and sworn to before me'') to accurately audit notarization dates and certificate validity periods.
+
+By evaluating only isolated text blocks rather than scanning full-page bitmaps, the engine eliminates background noise and reduces processing overhead:
+
+\textbf{Coordinate Remapping:} Local character coordinates $(x_{\mathrm{local}},y_{\mathrm{local}})$ are translated back into global page space ($x_{\mathrm{global}}=x_{\mathrm{crop}}+x_{\mathrm{local}},y_{\mathrm{global}}=y_{\mathrm{crop}}+y_{\mathrm{local}}$), preserving pixel-perfect alignment across the master PDF page.2.
+
+\textbf{Searchable PDF Lamination:} Character streams are laminated behind the scanned bitmap under ISO 32000-2 Text Rendering Mode 3 (\texttt{3 Tr}) \cite{ref13,ref18}, granting immediate in-browser searchability and dual-pane checklist verification while retaining 100\% of the authentic visual scan required for BAC bid evaluation.
+
+\textbf{Checklist Alignment:} Deterministic finite automaton (DFA) regular expressions evaluate statutory anchor terms (such as permit numbers, execution dates, and statutory headers) in linear $O(n)$ time \cite{ref25,ref26} to link attached documents to mandatory Section VIII checklist slots without generative hallucination risks.
 
 \subsection{Active Dodging Stamp Engine (Dynamic Whitespace Placement)}
-The Active Dodging Stamp Engine automates the non-occluding placement of mandatory compliance stamps, pagination markers, and certification seals \cite{ref34, ref35}.
-In public bidding, affixing official markings over pre-existing legal clauses, authorized signature lines, or notary seals constitutes visual document stomping, which can obscure vital contract terms or invalidate evidentiary records during BAC examination.
+The Text Recognition and Lamination Engine performs character extraction from document regions and supports the creation of searchable copies of scanned pages \cite{ref22}. It receives the text-region crops identified by the layout analysis stage and processes them through RapidOCR. Within this pipeline, a Differentiable Binarization text detector identifies text regions, after which the Single Visual Model for Text Recognition (SVTR) recognizes the characters in the detected regions \cite{ref23,ref24}. The crops are supplied without external binarization, thresholding, or morphological filtering before OCR. This design is informed by Türkmen et al. \cite{docxb2}, who reported lower date-extraction accuracy under several preprocessing conditions in their evaluation of official documents. Because their study did not evaluate RapidOCR on the present document collection, recognition performance remains subject to the study's own testing. The extracted text and its coordinates support the following operations:
+\begin{enumerate}
+\item Coordinate remapping: Coordinates returned for a cropped region are mapped back to their corresponding positions on the document page. This preserves the spatial relationship between recognized text and the page elements displayed in the workspace.
+\item Searchable PDF lamination: Recognized text may be added to a processed copy as an invisible text layer using PDF Text Rendering Mode 3 \cite{ref13,ref18}. The scanned page remains the visible layer, while the added text supports searching and text selection.
+\item Context-based date extraction: The engine identifies anchor phrases associated with execution dates, jurat dates, credential validity, and notary commission expiry. OCR-aware text similarity is used to locate the anchor phrases; candidate dates found in their corresponding text regions are then checked against the defined date formats and calendar validation rules. Limited character repair is applied only within eligible numeric positions and is recorded when used. Unreadable, invalid, or ambiguous dates are flagged for operator review rather than accepted silently.
+\item Contract-count extraction: For the Statement of All Ongoing Contracts, the engine processes the detected table region to derive the number of listed contracts. Eligible numeric tokens may undergo the same context-gated character repair before the count is determined. The resulting count is forwarded to the checklist engine to determine the number of slots for that requirement.
+\end{enumerate}
+The recognized text, extracted values, and detected layout information are forwarded to the Checklist Parser \& Matcher Engine described in Section~\ref{sec:checklist_parser}. Regular expressions and format-validation rules support field extraction, while document-to-checklist assignment is performed separately using the combined textual and layout evidence.
 
-The engine prevents occlusion by evaluating candidate placement zones across statutory margins (such as the page's lower-third or fourth quadrant).
-Using the layout bounding boxes from YOLOv8 and text token coordinates from RapidOCR as occupied obstacle zones, the engine searches for open whitespace valleys that accommodate the stamp's physical dimensions ().
-If a target corner is congested by a notary jurat or signature block, the engine dynamically steers placement to adjacent clear whitespace, guaranteeing 0.0\% visual text occlusion without requiring manual user repositioning.
+To ensure visual non-interference, the engine models document content as a spatial occupancy field across statutory candidate margins, focusing primarily on the lower fourth quadrant. Macroscopic bounding boxes predicted by the YOLOv8 layout model and fine-grained text tokens extracted by RapidOCR are aggregated into unified obstacle geometries. Each obstacle boundary is expanded with an outward protective dilation buffer to prevent visual clipping along character borders. The placement engine evaluates the candidate margin zone using a discrete spatial grid, computing clearance distances to neighboring content and prioritizing coordinate locations that guarantee zero visual overlap over pre-existing ink.
+
+\textbf{Boundary Conditions and Margin Exhaustion Protocol:} The operational environment routinely includes high-density legal instruments---such as single-spaced judicial affidavits, municipal tax declarations, and multi-column financial schedules---where typography extends to the physical edges of the sheet and standard margin clearances are completely absent. To maintain reliable operation across these constrained geometries without inducing pipeline failures, the architecture executes a deterministic fallback protocol:
+
+\textbf{Least-Overlap Best-Effort Positioning:} When zero-collision whitespace is unavailable within the target quadrant, the engine evaluates candidate grid pockets and positions the stamp at the specific coordinates that minimize visual interference, steering the mark toward interline whitespace or marginal gutters rather than dense body text.
+
+\textbf{Automated Human-in-the-Loop Flagging (\texttt{needs\_review}):} Concurrently, because the resulting placement incurs a non-zero overlap count, the engine records an automated \texttt{needs\_review = true} state in the package audit ledger (\texttt{stamp\_state} JSONB). This pre-populates the stamp at the best-effort coordinates on the interactive staging canvas while raising an amber inspection badge, directing administrative personnel to visually verify the placement, manually fine-tune coordinates, or assign an authorized endorsement slip-sheet prior to final compilation.
 
 \subsection{Dual-Track Compilation \& Packaging (Track 1 \& Track 2)}
 The Dual-Track Compilation and Packaging Engine reconciles the legal requirement for visual presentation with the cryptographic integrity mandated for electronic public procurement \cite{ref42}.
@@ -164,21 +188,22 @@ Storing all corporate assets in encrypted on-premise directories ensures that co
 
 \section{Entity Relationship Diagram}
 \label{sec:erd_data_flow}
+\setcounter{figure}{0}
 
 The data flow and relational data architecture describes the structural transformations, entity relationships, and data movements across system boundaries, from initial file ingestion through feature extraction, compliance auditing, dynamic spatial stamp placement, and dual-track output generation.
 Operating within an isolated PostgreSQL 16 database \cite{ref55} on the local host workstation, the underlying persistence model adopts a hybrid architecture that balances normalized third normal form (3NF) relational tables with flexible, semi-structured Binary JSON (JSONB) document columns.
 Structured entities with strict transactional boundaries (such as user credentials, active sessions, shared workspaces, and persistent corporate assets) are modeled as normalized relational tables with cascading foreign keys (ON DELETE CASCADE) to eliminate orphaned records.
 Concurrently, high-frequency interactive canvas operations (including real-time stamp repositioning, 50-page sequence reordering, and dynamic checklist matching) are persisted within binary JSONB columns indexed via Generalized Inverted Indexes (GIN) \cite{ref55}.
-This hybrid strategy eliminates the overhead of executing multi-table relational joins or running disruptive table alterations during active tender preparation, ensuring sub-millisecond query responses during interactive document collation across Philippine public procurement packages \cite{ref1, ref46}.
+This hybrid strategy eliminates the overhead of executing multi-table relational joins or running disruptive table alterations during active tender preparation, ensuring sub-millisecond query responses during interactive document collation across Philippine public procurement packages \cite{ref1,ref46}.
 
-As shown in Figure 3.2.1, standard relational notation is observed: Primary Keys are explicitly designated by (PK), Foreign Keys by (FK), and unique constraints by (U).
+As shown in Figure~\ref{fig:entity_relationship}, standard relational notation is observed: Primary Keys are explicitly designated by (PK), Foreign Keys by (FK), and unique constraints by (U).
 Table relationships are expressed using standard crow's foot notation, where double vertical crossbars denote a mandatory one-to-one ($1:1$) or one-to-many ($1:N$) parent relationship, and terminal branch forks denote cardinality of many ($1:N$ or $N:M$).
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.95\textwidth]{{figures/Figure 3.2}.png}
-\caption*{\textbf{Figure 3.2.1}}
-\label{fig_methodology_3_2_1}
+\caption{Level 0 and Level 1 Data Flow Diagrams}
+\label{fig:entity_relationship}
 \end{figure}
 
 \subsection{Users and Authentication Security Schema (users, sessions)}
@@ -202,7 +227,7 @@ Finally, checklist\_state tracks parsed Section VIII compliance requirements, re
 \subsection{The Nest Asset Archive (nest\_assets)}
 The nest\_assets table stores recurring corporate eligibility credentials---such as Mayor's Permits, BIR Tax Clearances, and SEC/DTI registrations---that bidders must repeatedly submit across multiple tenders \cite{ref1, ref46}.
 Each record links to the administrative user who uploaded it (registered\_by referencing users.id) and tracks its statutory category (LEGAL, TECHNICAL, FINANCIAL) along with an immutable SHA-256 binary hash (sha256\_hash) \cite{ref43}.
-When a tender checklist is parsed, the system checks nest\_assets; if a matched document has passed its expiry\_date, the system auto-hydrates the file but attaches a visual warning ([\textbf{WARNING: EXPIRED}]), preventing summary disqualification under Section 30 of RA 9184 and RA 12009.
+When a tender checklist is parsed, the system checks nest\_assets; if a matched document has passed its expiry\_date, the system auto-hydrates the file but attaches a visual warning ([\ensuremath{\triangle} EXPIRED]), preventing summary disqualification under Section 30 of RA 9184 and RA 12009.
 
 \subsection{The Stamp Album Graphic Catalog (company\_stamps)}
 The company\_stamps table functions as the persistent catalog of official corporate seals, compliance marks, and authorized signatory profiles \cite{ref46}.
@@ -219,10 +244,11 @@ The application middleware evaluates this table to enforce Row-Level Security (R
 The audit\_logs and compilation\_manifests tables provide statutory compliance and cryptographic non-repudiation.
 The audit\_logs table functions as an append-only forensic ledger recording user actions (action: LOGIN, UPLOAD, AUTO\_DODGE, COMPILE), user IDs, IP addresses, and UTC timestamps, fulfilling personal data controller accountability under RA 10173 \cite{ref6}.
 The compilation\_manifests table permanently records compiled package outputs, linking to bid\_packages ($1:1$).
-It stores the master package hash (master\_sha256), individual source file byte-range digests (manifest\_json), and native PKCS\#7 digital signature statuses (pkcs7\_status), ensuring legal admissibility before the Bids and Awards Committee (BAC) under Supreme Court A.M. No. 01-7-01-SC \cite{ref10} and RA 8792 \cite{ref11}.
+It stores the master package hash (master\_sha256), individual source file byte-range digests (manifest\_json), and native PKCS\#7 digital signature statuses (pkcs7\_status), ensuring legal admissibility before the Bids and Awards Committee (BAC) under Supreme Court A.M. No. 01-7-01-SC \cite{ref11} and RA 8792 \cite{ref10}.
 
 \section{Program Flowcharts}
 \label{sec:program_flowcharts}
+\setcounter{figure}{0}
 
 The operational workflow of the document intelligence framework is structured into five distinct processing pipelines, spanning initial file ingestion, computer vision perception, statutory compliance auditing, dynamic spatial stamp placement, and dual-track output compilation.
 The following subsections detail the algorithmic flow and decision logic governing each pipeline component.
@@ -232,12 +258,12 @@ The following subsections detail the algorithmic flow and decision logic governi
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.88\textwidth]{{figures/Figure 3.3.1}.png}
-\caption*{\textbf{Figure 3.3.1}}
-\label{fig_methodology_3_3_1}
+\includegraphics[width=\textwidth]{{figures/Figure 3.3.1}.png}
+\caption{File Ingestion and Pre-processing Flowchart}
+\label{fig:ingestion_flow}
 \end{figure}
 
-Figure 3.3.1 illustrates the initial file ingestion, validation, and pre-processing pipeline.
+Figure~\ref{fig:ingestion_flow} illustrates the initial file ingestion, validation, and pre-processing pipeline.
 Upon receiving multi-file bidder uploads via Channel A or Channel B, the application server immediately computes an immutable SHA-256 cryptographic hash digest for each file to guarantee data integrity.
 Files are subsequently validated through low-level C-bindings; if structural stream corruption or non-standard compression errors (such as FlateDecode error codes 10 or 134) are detected, the byte stream is automatically routed through the Ghostscript JIT repair engine to reconstruct the cross-reference table and re-encode the file into an ISO-compliant PDF structure.
 Once repaired, PyMuPDF evaluates the Coordinate Transformation Matrix (CTM) to normalize page orientation and dimensions to standard A4 portrait specifications, concurrently generating lightweight WebP raster images for client-side workspace preview rendering.
@@ -247,12 +273,12 @@ Once repaired, PyMuPDF evaluates the Coordinate Transformation Matrix (CTM) to n
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.88\textwidth]{{figures/Figure 3.3.2}.png}
-\caption*{\textbf{Figure 3.3.2}}
-\label{fig_methodology_3_3_2}
+\includegraphics[width=\textwidth]{{figures/Figure 3.3.2}.png}
+\caption{Layout Segmentation and Targeted OCR Flowchart}
+\label{fig:layout_ocr_flow}
 \end{figure}
 
-Figure 3.3.2 outlines the two-stage visual perception and targeted text recognition workflow.
+Figure~\ref{fig:layout_ocr_flow} outlines the two-stage visual perception and targeted text recognition workflow.
 In Stage 1, the rendered page image is passed to the ONNX-compiled YOLOv8s layout segmentation model running on CPU execution providers, predicting bounding box coordinates for four key semantic layout classes: Signature\_Block, Official\_Seal, Table\_Grid, and Text\_Paragraph.
 In Stage 2, detected non-text elements (signatures and seals) bypass text recognition and are forwarded directly as obstacle boundaries to the active dodging engine.
 Conversely, detected text paragraph regions are cropped and transferred directly into shared C-memory buffers for RapidOCR processing (combining DBNet++ detection and SVTR character decoding).
@@ -263,12 +289,12 @@ The extracted text tokens are subsequently evaluated using deterministic finite 
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.88\textwidth]{{figures/Figure 3.3.3}.png}
-\caption*{\textbf{Figure 3.3.3}}
-\label{fig_methodology_3_3_3}
+\includegraphics[width=\textwidth]{{figures/Figure 3.3.3}.png}
+\caption{Pre-flight Statutory Audit \& Classification Flowchart}
+\label{fig:statutory_audit_flow}
 \end{figure}
 
-Figure 3.3.3 depicts the pre-flight statutory compliance audit pipeline.
+Figure~\ref{fig:statutory_audit_flow} depicts the pre-flight statutory compliance audit pipeline.
 Extracted document metadata, layout regions, and textual tokens are evaluated against deterministic statutory rule parameters derived from Republic Act No. 12009 and standard GPPB templates.
 The rule engine verifies mandatory execution requirements on key legal affidavits, such as the Omnibus Sworn Statement (OSS) and Bid Securing Declaration (BSD), by confirming the presence and spatial co-location of authorized signature blocks and notary seals.
 Concurrently, regular expression engines evaluate execution dates against tender opening schedules to flag expired certificates or post-dated jurats.
@@ -279,48 +305,50 @@ Verification flags (Pass, Warning, or Fail) alongside missing requirement logs a
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.88\textwidth]{{figures/Figure 3.3.4}.png}
-\caption*{\textbf{Figure 3.3.4}}
-\label{fig_methodology_3_3_4}
+\includegraphics[width=\textwidth]{{figures/Figure 3.3.4}.png}
+\caption{Dynamic Obstacle-Free Stamp Placement Flowchart}
+\label{fig:stamp_placement_flow}
 \end{figure}
 
-Figure 3.3.4 details the dynamic whitespace evaluation and obstacle-avoidance algorithm for non-occluding stamp placement.
-The engine constructs a two-dimensional grid frame across target margin search zones (predominantly the lower-right page quadrant).
-Bounding boxes corresponding to pre-existing text, signatures, seals, and tabular elements are projected onto the grid as occupied obstacle cells.
-The engine then executes a constrained grid search to calculate rectangular clearance for the selected endorsement stamp dimensions, optimizing a scoring function that penalizes obstacle collisions and proximity.
-Upon selecting the candidate coordinates yielding maximum clearance (0.0\% text occlusion), the spatial parameters are mapped via affine transformation matrices to place the stamp graphic cleanly within the page canvas without obscuring critical legal content.
+Figure~\ref{fig:stamp_placement_flow} defines the decision logic governing dynamic non-occluding compliance stamp placement and margin clearance evaluation. The process initiates when a required endorsement stamp or pagination mark is staged from the Stamp Album, retrieving its bounding dimensions ($w_s \times h_s$) and targeting candidate margin envelopes restricted primarily to the lower fourth quadrant. Detected document features---including narrative text blocks, authorized signatures, notary seals, and tabular schedules---are aggregated into unified obstacle boundaries expanded by an outward safety dilation buffer ($\delta_p = 15$ pt) to eliminate character clipping. The decision sequence evaluates candidate grid positions across two distinct operational pathways:
+
+\textbf{Nominal Branch (Collision-Free Clearance, $n = 0$):} If open whitespace accommodating the stamp envelope is located within the target quadrant, the engine commits the optimal coordinates to the session overlay, confirming a 0.0\% visual text occlusion rate.
+
+\textbf{Margin Exhaustion Fallback ($n > 0$):} In high-density legal documents where text runs edge-to-edge and standard margin space is depleted, the algorithm identifies the coordinates yielding the minimum possible visual overlap, steering the stamp toward marginal gutters or interline spacing. Concurrently, the engine records an automated \texttt{needs\_review = true} state in the audit ledger, rendering an amber inspection badge on the interactive workspace canvas. This pre-populates the stamp at the best-effort position while alerting administrative personnel to visually verify the placement, manually fine-tune coordinates, or assign an endorsement slip-sheet prior to final compilation approval.
 
 \subsection{Dual-Track Package Assembly Flowchart}
 \label{sec:flowchart_dual_track}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.88\textwidth]{{figures/Figure 3.3.5}.png}
-\caption*{\textbf{Figure 3.3.5}}
-\label{fig_methodology_3_3_5}
+\includegraphics[width=\textwidth]{{figures/Figure 3.3.5}.png}
+\caption{Dual-Track Package Assembly Flowchart}
+\label{fig:dual_track_flow}
 \end{figure}
 
-Figure 3.3.5 illustrates the dual-track compilation and packaging pipeline that reconciles physical printing standardization with digital cryptographic non-repudiation.
+Figure~\ref{fig:dual_track_flow} illustrates the dual-track compilation and packaging pipeline that reconciles physical printing standardization with digital cryptographic non-repudiation.
 For Track 1 (Master Print Bidding Document), staged attachments are merged into the statutory Section VIII checklist sequence, page geometries are normalized to A4 portrait, compliance stamp annotations are flattened directly into base content streams using 3x3 CTM transformations, and sequential Bids and Awards Committee (BAC) pagination marks are applied to generate a single print-ready PDF volume.
 For Track 2 (Evidentiary Archive Container), the engine bypasses visual stream transformations entirely, bundling 100\% untouched original source files with their native PKCS\#7 digital signatures intact inside a ZIP archive alongside a cryptographically signed manifest.json audit ledger mapping SHA-256 digests for PhilGEPS e-bidding compliance.
 
 \section{Local Workspace Dashboard and User Interface Design}
 \label{sec:ui_design}
+\setcounter{figure}{0}
 
-The local interactive workspace interface provides client-side visual inspection, staging, manual override, and document assembly capabilities through a React-based single-page application.
-The following subsections detail the interface architecture and layout screens implemented across the platform.
+The client presentation layer of Bid.io is implemented as an interactive, high-density desktop web application engineered to bridge autonomous backend perception algorithms with human-in-the-loop (HITL) administrative oversight. Developed using React 19, Tailwind CSS, and Framer Motion, the interface delivers real-time visual inspection, document staging, automated compliance verification, and dual-track export capabilities entirely within the operator's local browser environment.
+
+In public procurement workflows governed by Republic Act No. 9184 and Republic Act No. 12009, compliance evaluation operates under a strict, non-discretionary ``pass/fail'' standard. Because a single misplaced annex, an overlooked expired clearance, or an occluded jurat results in summary disqualification, the interface is deliberately architected to eliminate visual clutter and cognitive fatigue.
 
 \subsection{File Ingestion \& Upload Workspace Interface}
 \label{sec:ui_ingestion}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.90\textwidth]{{figures/Figure 3.4.1}.png}
-\caption*{\textbf{Figure 3.4.1}}
-\label{fig_methodology_3_4_1}
+\includegraphics[width=\textwidth]{{figures/Figure 3.4.1}.png}
+\caption{File Ingestion \& Upload Workspace Interface}
+\label{fig:ui_ingestion}
 \end{figure}
 
-Figure 3.4.1 depicts the primary onboarding view of the workspace, structured around the dual-channel ingestion model defined in Section 3.1.2.
+Figure~\ref{fig:ui_ingestion} depicts the primary onboarding view of the workspace, structured around the dual-channel ingestion model defined in Section~\ref{sec:ingestion_channels}.
 The interface decouples the procuring entity's regulatory criteria from project-specific bidding assets:
 \begin{enumerate}
     \item \textbf{Channel A (Tender Checklist Reference):} A dedicated intake panel where the operator uploads the official Bidding Documents Section VIII (\emph{Checklist of Technical and Financial Documents}).
@@ -333,106 +361,138 @@ The interface decouples the procuring entity's regulatory criteria from project-
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.90\textwidth]{{figures/Figure 3.4.2}.png}
-\caption*{\textbf{Figure 3.4.2}}
-\label{fig_methodology_3_4_2}
+\includegraphics[width=\textwidth]{{figures/Figure 3.4.2}.png}
+\caption{Document Staging \& Reordering Board}
+\label{fig:ui_staging}
 \end{figure}
 
-Figure 3.4.2 presents the intermediate document organization and staging board.
-Prior to deep visual perception and compliance checking, ingested files are registered as discrete document cards arranged across an interactive staging grid.
-Each card provides metadata summaries including original filename, sanitized file size, detected page count, and an immutable SHA-256 hash digest.
-Operators can dynamically reorder attachments using horizontal drag-and-drop reordering bars, split multi-page bundles, merge complementary annexes, or invoke the \textbf{Magic Auto-Sort} engine to automatically sort documents into statutory sequence order.
-Pre-flight status indicators highlight whether each file was validated through Ghostscript JIT stream sanitization, ensuring corrupted PDF byte structures are resolved before proceeding to layout analysis.
+Figure~\ref{fig:ui_staging} presents the intermediate document organization and staging board. Prior to deep layout inference and compliance stamping, the staging view visualizes the ingested document portfolio arranged across functional procurement tiers (e.g., Notice of Award, Contracts and Agreements, Technical Specifications, and Statutory Affidavits).
+
+The header ribbon integrates an interactive sequence telemetry bar displaying real-time permutation disorder metrics computed via the Longest Increasing Subsequence (LIS) and patience sorting algorithms: the permutation inversion count ($\operatorname{Inv}(Q)$) and the minimum required physical relocation moves:
+\begin{equation}
+\operatorname{Moves}(Q)=m-\operatorname{LIS}(Q)
+\end{equation}
+Document rows feature drag handles for manual reordering, page count summaries, and edit/locked status chips. Operators can review the preliminary assembly, select all or individual sub-folders, and click ``Auto-Sort Sequence'' to automatically reconcile the document sequence with statutory guidelines in minimal operational steps.
 
 \subsection{Tri-Pane Compliance Checking and Bipartite Inspection Workspace}
 \label{sec:ui_tripane}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.90\textwidth]{{figures/Figure 3.4.3}.png}
-\caption*{\textbf{Figure 3.4.3}}
-\label{fig_methodology_3_4_3}
+\includegraphics[width=\textwidth]{{figures/Figure 3.4.3}.png}
+\caption{Tri-Pane Compliance Checking and Bipartite Inspection Workspace}
+\label{fig:ui_compliance}
 \end{figure}
 
-Figure 3.4.3 illustrates the tri-pane compliance checking and bipartite inspection workspace.
-The interface unifies document tree navigation, visual canvas inspection, and statutory checklist auditing into three synchronized operational panes:
-\begin{enumerate}
-    \item \textbf{Left Navigation Sidebar:} A persistent vertical sidebar displaying the complete set of uploaded document units $U = \{u_1, \dots, u_m\}$ mapped against Section VIII checklist slots $C = \{c_1, \dots, c_k\}$.
-    Visual status badges indicate hydration provenance (\texttt{[Attached from Nest]}), compliance confirmation (\texttt{[COMPLIANT]}), or missing mandatory items (\texttt{[WARNING: MISSING]}).
-    \item \textbf{Center Interactive Canvas Viewport:} A high-resolution document viewport rendering server-side 150 DPI WebP preview streams.
-    The canvas visualizes predicted YOLOv8-Doc bounding box overlays for \texttt{Signature\_Block}, \texttt{Official\_Seal}, \texttt{Table\_Grid}, and \texttt{Text\_Paragraph} primitives.
-    \item \textbf{Right Statutory Pre-Flight Audit Drawer:} A collapsible inspector panel displaying extracted OCR token streams, notary jurat details, commission expiration dates, and rule verification results.
-\end{enumerate}
+The core analytical innovation of the platform is consolidated within the Compliance Checking Workspace, illustrated in Figure~\ref{fig:ui_compliance}. Designed specifically to support human-in-the-loop adjudication under strict time constraints, this interface supersedes passive PDF viewing by coupling deep computer vision layout segmentation with targeted in-memory OCR keyword matching within a unified, three-pane synchronized layout.
+
+The workspace is architected into three structurally coordinated inspection zones:
+
+\textbf{Pane 1: Tender Files and Alignment Navigator (Left)}
+
+A persistent vertical sidebar displaying the complete set of uploaded document units $U=\{u_1,\ldots,u_m\}$ mapped against mandatory checklist slots $C=\{c_1,\ldots,c_k\}$. Each file card displays its assigned statutory slot badge, title, and multimodal compatibility score $S(u_i,c_j)\in[0,1]$ computed via:
+\begin{equation}
+S(u_i,c_j)=w_1T_{ij}+w_2K_{ij}+w_3L_{ij}
+\end{equation}
+The navigator color-codes each card according to its statutory verification state:
+
+\textbf{Correct Order (Green Tag):} Documents whose uploaded order matches the prescribed ordinal position ($q_a<q_b\Leftrightarrow a<b$).
+
+\textbf{Inverted Sequence (Amber Warning):} Documents identified as out of order relative to the regulatory sequence. The card displays a dedicated ``Shift to Position'' action button, allowing the operator to resolve the inversion in a single click.
+
+\textbf{Missing Attachment Defect (Red Alert):} Mandatory checklist items ($M_j=1$) for which no uploaded document satisfied the acceptance threshold ($\max_i S(u_i,c_j)<\tau=0.65$). The card displays an inline action button allowing immediate manual file injection or retrieval from The Nest.
+
+\textbf{Computer Vision Entity Tags:} Compact monospace chips indicating detected layout classes (Signature\_Block, Official\_Seal, Table\_Grid) and verified OCR keyword tokens.
+
+\textbf{Pane 2: Procuring Entity Checklist Reference (Center)}
+
+A high-fidelity document viewport rendering the official Section VII/VIII ground-truth checklist. Extracted checklist requirements are highlighted as interactive specification rows (Tab 1 through Tab 6). When a file card is selected in Pane 1, the checklist viewer automatically scrolls to and highlights the corresponding statutory clause, establishing direct visual provenance. Targeted keyword queries (e.g., ``Performance Security'') executed in the global search bar dynamically highlight matching clauses in bright yellow.
+
+\textbf{Pane 3: Matched Document Unit Canvas (Right)}
+
+A high-resolution, hardware-accelerated preview rendering the active bidding document corresponding to the selected checklist slot. The canvas renders PyMuPDF 150 DPI WebP rasters overlaid with SVG vector bounding boxes indicating YOLOv8 layout proposals:
+
+\textbf{Blue Bounding Boxes:} Identify narrative body clauses (Text\_Paragraph) containing targeted OCR text anchors.
+
+\textbf{Green Bounding Boxes:} Localize authorized signatory fields (Signature\_Block) and affiant name lines.
+
+\textbf{Purple Bounding Boxes:} Localize circular notarial dry seals and municipal stamps (Official\_Seal).
+
+\textbf{Collision-Free Compliance Stamp:} Renders the proposed endorsement stamp positioned at optimal coordinates $(i^*,j^*)$ calculated by the active dodging algorithm, confirming 0.0\% visual occlusion over pre-existing ink.
+
+Directly below the canvas, the Human-in-the-Loop Adjudication Bar provides immediate decision controls: operators can inspect the automated matching rationale, manually flag a documentary defect (logging an entry into the pre-flight audit ledger), or confirm statutory conformity by clicking ``Mark Slot Verified.'' An ``Auto-Align Sequence'' button in the top toolbar executes the bipartite Hungarian permutation plan, eliminating all sequence inversions across the submission package.
 
 \subsection{Stamp Placement and Margin Inspection Studio}
 \label{sec:ui_stamp_studio}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.90\textwidth]{{figures/Figure 3.4.4}.png}
-\caption*{\textbf{Figure 3.4.4}}
-\label{fig_methodology_3_4_4}
+\includegraphics[width=\textwidth]{{figures/Figure 3.4.4}.png}
+\caption{Stamp Placement and Margin Inspection Studio}
+\label{fig:ui_stamp_studio}
 \end{figure}
 
-Figure 3.4.4 illustrates the dedicated Stamp Placement and Margin Inspection Studio.
-When an operator configures mandatory compliance marks---such as ``Certified True Copy from Original'', authorized signatory initials, or tender conformed blocks---the studio provides real-time visual feedback of candidate placement coordinates.
-The active dodging engine evaluates candidate margin cells across the lower-right page quadrant, projecting obstacle bounding boxes and rendering optimal non-occluding coordinates ($0.0\%$ visual text occlusion).
-Operators can inspect calculated clearance distances $d(i, j)$, adjust safety margins $\delta_p$, toggle stamp opacity, or manually reposition stamp graphic overlays via drag gestures when manual override is desired.
+Figure~\ref{fig:ui_stamp_studio} illustrates the dedicated Stamp Placement and Margin Inspection Studio. When preparing physical tender binders, prospective contractors must affix uniform endorsement markings across hundreds of pages without obscuring printed legal clauses, monetary values, or notary jurats.
+
+The central canvas visualizes the candidate search envelope restricted to the lower fourth quadrant ($i\in[43,51]$, $j\in[19,29]$ under portrait orientation). Detected layout boxes are displayed with their dilated safety margins ($\delta_p=15\text{pt}$). The calculated endorsement stamp ($43\text{mm}\times18\text{mm}$) is rendered at the optimal, collision-free coordinate pocket with an active outline and corner resize/drag handles, allowing operators to manually fine-tune coordinates whenever a congested margin triggers an automated \texttt{needs\_review} pre-flight flag.
 
 \subsection{The Nest: Persistent Corporate Asset Vault and Cloud Synchronization}
 \label{sec:ui_nest_vault}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.90\textwidth]{{figures/Figure 3.4.5}.png}
-\caption*{\textbf{Figure 3.4.5}}
-\label{fig_methodology_3_4_5}
+\includegraphics[width=\textwidth]{{figures/Figure 3.4.5}.png}
+\caption{The Nest: Persistent Corporate Asset Vault and Cloud Synchronization}
+\label{fig:ui_nest}
 \end{figure}
 
-Figure 3.4.5 presents the interface for \emph{The Nest}, the local corporate asset vault dedicated to managing recurring contractor eligibility credentials under Section VIII Class ``A'' requirements \cite{ref1, ref46}.
-The dashboard categorizes stored instruments across Legal, Technical, and Financial directories, archiving Mayor's Permits, BIR Tax Clearances, DTI/SEC registrations, and PhilGEPS Platinum certificates.
-Assets are evaluated against statutory temporal constraints; expired credentials display amber warnings (\texttt{[WARNING: EXPIRED]}), preventing accidental submission of non-compliant certificates.
-The subsystem supports automated Google Drive cloud synchronization, mirroring remote asset vaults while maintaining an encrypted AES-256-GCM local on-premise cache \cite{ref56} to preserve edge operational autonomy during air-gapped bid preparation.
+Figure~\ref{fig:ui_nest} presents the interface for The Nest, the local corporate asset vault dedicated to managing recurring administrative and legal eligibility credentials (e.g., Mayor's Permits, SEC Certificates, PhilGEPS Platinum Registrations, and Audited Financial Statements). In traditional bidding workflows, administrative personnel repeatedly search and upload identical corporate files across independent tenders, frequently risking disqualification by attaching outdated or expired certificates.
+
+The Nest resolves this inefficiency through local encrypted persistence coupled with bidirectional cloud synchronization:
+
+\textbf{Cloud Mirroring Banner:} Prominently displays the active synchronization status with the organization's cloud repository. A ``Force Sync Drive'' button enables instant cache invalidation and re-indexing of remote assets while maintaining an encrypted local mirror on the edge server under AES-256-GCM.
+
+\textbf{Credential Integrity Cards:} Stored instruments are displayed in an architectural grid. Each card details the official document title, issuing agency, page volume, designated internal custodian and immutable SHA-256 fingerprint.
+
+\textbf{Automated Expiry Safeguards:} The system continuously audits certificate validity dates extracted via RapidOCR against current system timestamps. Valid records display green status badges (GDrive Synced $\bullet$ Valid until Dec 31, 2026), whereas expired instruments are flagged with high-visibility crimson warnings (EXPIRED IN CLOUD $\bullet$ Needs Renewal). When parsing a tender checklist, The Nest auto-hydrates matching valid files into the workspace; if an expired certificate is detected, the system blocks automatic assignment and alerts the operator, preventing procedural disqualification under Section 30 of RA 9184 and Section 29 of RA 12009.
 
 \subsection{Security Perimeter and Multi-User Administration}
 \label{sec:ui_security_admin}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.90\textwidth]{{figures/Figure 3.4.6}.png}
-\caption*{\textbf{Figure 3.4.6}}
-\label{fig_methodology_3_4_6}
+\includegraphics[width=\textwidth]{{figures/Figure 3.4.6}.png}
+\caption{Security Perimeter and Multi-User Administration}
+\label{fig:ui_authentication}
 \end{figure}
 
-Figures 3.4.6 and 3.4.7 illustrate the security perimeter and administrative user management views.
-The authentication gateway (Figure 3.4.6) enforces an asynchronous security perimeter via FastAPI middleware, validating credentials against Google Single Sign-On (SSO) OAuth2 protocols.
-Newly authenticated accounts are initialized in a quarantined \texttt{status: 'pending'} state, blocking unauthorized access to proprietary procurement dossiers until account privileges are granted by a designated system administrator.
+Figures~\ref{fig:ui_authentication} and \ref{fig:ui_user_management} illustrate the security perimeter and administrative user management views. Operating strictly under the data sovereignty mandates of the Data Privacy Act of 2012 (RA 10173), all commercial pricing matrices, proprietary technical proposals, and corporate tax records remain strictly confined to the local on-premise workstation.
 
-\subsection{Compilation Console and Cryptographic Audit Ledger Viewer}
-\label{sec:ui_compilation_console}
+The authentication gateway (Figure~\ref{fig:ui_authentication}) enforces an asynchronous security perimeter via FastAPI middleware. User identity is authenticated through Google Single Sign-On (SSO) OAuth2 verification, issuing 32-byte opaque session tokens conforming to RFC 5280 stored in encrypted HttpOnly, SameSite=Strict browser cookies.
+
+\label{sec:ui_user_management}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.90\textwidth]{{figures/Figure 3.4.7}.png}
-\caption*{\textbf{Figure 3.4.7}}
-\label{fig_methodology_3_4_7}
+\includegraphics[width=\textwidth]{{figures/Figure 3.4.7}.png}
+\caption{User Management Panel}
+\label{fig:ui_user_management}
 \end{figure}
 
-The User Management Panel (Figure 3.4.7) manages role-based access control (RBAC) and tenant delegation across joint-venture bidding teams.
-Administrators can inspect active user sessions, audit workspace sharing grants, and review system audit ledgers.
-The compilation console coordinates the final dual-track synthesis: Track 1 generates the unified, A4-normalized, CTM-flattened master PDF for physical print submission, while Track 2 generates the tamper-evident evidentiary digital package containing byte-unaltered source files and the cryptographically signed \texttt{manifest.json} audit ledger.
+The User Management Panel (Figure~\ref{fig:ui_user_management}) manages role-based access control (RBAC) and tenant delegation across the bidding personnel. To prevent unauthorized data exposure across shared office terminals, newly registered accounts are quarantined in a pending state until approved by designated system administrators. The administration table records assigned roles (admin or user), active session statuses, and UTC-synchronized login audit timestamps, providing complete forensic accountability under RA 10173 throughout the procurement preparation lifecycle.
 
 \section{Engineering Computations and Mathematical Formulations}
 \label{sec:engineering_computations}
+\setcounter{table}{0}
 
-This section defines the custom calculations of the framework: page orientation and A4 normalization, coordinate conversion between detection and page spaces, stamp placement via constrained 2D grid search, and document-to-checklist matching.
-All coordinates are in PostScript points ($1\text{ pt} = 1/72\text{ in}$), with the origin at the top-left corner and the $y$-axis pointing downward unless noted otherwise.
+This section defines the custom calculations of the framework: page orientation and A4 normalization, conversion of detector coordinates between page representations, non-occluding stamp placement, and checklist matching with order verification. The internal computations of the YOLOv8s detector and the OCR engine are established in Chapter 2 and are not repeated here.
+
+All coordinates are in PostScript points ($1\text{ pt} = 1/72\text{ in}$), with the origin at the top-left corner and the vertical axis pointing down, which is the convention of the PyMuPDF rendering environment.
 
 \subsection{Coordinate Transformation Matrices (CTM), Resizing, and Orientation Normalization}
 \label{sec:ctm_normalization}
 
-Pages in a bid package arrive in different sizes (US Letter, Legal, Tabloid, ISO A3) and with different orientations.
-Standard Philippine Bidding Documents require a uniform A4 portrait submission ($W_t = 595.276\text{ pt}$, $H_t = 841.890\text{ pt}$).
+Pages in a bid package arrive in different sizes (US Letter, Legal, Tabloid, ISO A3) and with different viewing-rotation flags. To produce a uniform printable package (Track 1), every page is mapped onto an upright ISO 216 A4 portrait sheet of $(W_t, H_t) = (595.276, 841.890)$ pt without stretching or cropping. Orientation here means the orientation recorded in the page metadata (the \texttt{/Rotate} flag and the aspect ratio of the \texttt{/MediaBox}); correcting residual skew of scanned content is outside this computation.
 Let a source page have raw dimensions $(W, H)$ from its \texttt{/MediaBox} and viewing rotation $\rho \in \{0^\circ, 90^\circ, 180^\circ, 270^\circ\}$ from its \texttt{/Rotate} entry.
 The dimensions of the page as displayed, with the rotation applied, are:
 \begin{equation}
@@ -443,9 +503,9 @@ The dimensions of the page as displayed, with the rotation applied, are:
 The page is displayed in landscape when its displayed width exceeds its displayed height:
 \begin{equation}
 \label{eq:landscape_indicator}
-\ell = \mathbf{1}[W_v > H_v] \in \{0, 1\}
+\ell = [W_v > H_v] \in \{0, 1\}
 \end{equation}
-For non-square pages this equals the exclusive-or of the two conditions that cause it: $\ell = [\rho \in \{90^\circ, 270^\circ\}] \oplus [W > H]$.
+For non-square pages this equals the exclusive-or of the two conditions that cause it: $\ell = [\rho \in \{90^\circ, 270^\circ\}] \oplus [W > H]$. A physically wide page is displayed wide unless it carries a sideways flag, and a physically tall page is displayed wide only if it carries one. Reading the flag and the aspect ratio together is what keeps scanner output tagged \texttt{/Rotate 90} from being misclassified.
 To keep wide schedules and drawings readable, a displayed landscape page ($\ell = 1$) is turned a quarter-turn counter-clockwise so that it uses the full height of the portrait sheet.
 The dimensions after the turn and before scaling are:
 \begin{equation}
@@ -466,45 +526,44 @@ t_x = \frac{W_t - s W_e}{2}, \quad t_y = \frac{H_t - s H_e}{2}
 A point $\mathbf{p} = (x, y)$ on the displayed source page is mapped to the A4 sheet by:
 \begin{equation}
 \label{eq:point_mapping}
-\mathbf{p}' = s \mathbf{Q}_\ell(\mathbf{p}) + \begin{bmatrix} t_x \\ t_y \end{bmatrix}
+\mathbf{p}' = s \mathbf{Q}_L(\mathbf{p}) + \begin{bmatrix} t_x \\ t_y \end{bmatrix}
 \end{equation}
 \begin{equation}
 \label{eq:rotation_operators}
 \mathbf{Q}_0(x, y) = (x, y), \quad \mathbf{Q}_1(x, y) = (y, W_v - x)
 \end{equation}
-$\mathbf{Q}_1$ is a counter-clockwise quarter-turn in the top-left, downward-$y$ convention: the top-left corner $(0, 0)$ maps to $(0, W_v)$, the bottom-left $(0, H_v)$ maps to $(0, 0)$, and the top-right $(W_v, 0)$ maps to $(H_v, W_v)$.
-PDF content streams use a bottom-left origin, so the matrix $[a, b, c, d, e, f]$ written to the stream applies the vertical flip $y \mapsto H_t - y$ on the output coordinates.
+$\mathbf{Q}_1$ is a counter-clockwise quarter-turn in the top-left, downward-$y$ convention: the top-left corner $(0, 0)$ of the landscape page goes to the bottom-left $(0,W_v)$, and its top-right corner $(W_v, 0)$ goes to the top-left $(0, 0)$. Both operators keep axis-aligned rectangles axis-aligned.
+
+PDF content streams use a bottom-left origin, so the matrix $[a,b,c,d,e,f]$ written to the stream is this transform conjugated by a vertical flip on the source page (height $H_v$) and on the target page (height $H_t$). PyMuPDF performs that conjugation when it places a source page on the A4 sheet, so the formulation here stays in the single top-left convention.
 
 \subsection{Bidirectional Coordinate Conversion Between Detection and Page Spaces}
 \label{sec:coordinate_conversion}
 
-The layout detector works on a $640 \times 640$ pixel tensor, while the stamp engine places marks in points on the displayed source page.
-Four spaces arise in the pipeline:
+The layout detector works on a $640 \times 640$ pixel tensor, while the stamp engine places marks in points on the final A4 sheet.
+A detected box therefore passes through four spaces:
 \begin{enumerate}
     \item The $640 \times 640$ detector input.
-    \item The $150\text{ DPI}$ preview raster of the displayed source page, rendered by PyMuPDF with the page's \texttt{/Rotate} entry applied.
+    \item The $150\text{ DPI}$ preview raster of the displayed source page, rendered by PyMuPDF with the page's \texttt{/Rotate} applied and before the A4 transform.
     \item The displayed source page in points.
     \item The A4 sheet.
 \end{enumerate}
-Detecting on the upright displayed preview keeps signatures, seals, and tables in the orientation seen by human reviewers, which matches the training annotations.
+Detecting on the upright displayed preview keeps signatures, seals, and tables in the orientation seen in training. The boxes are carried to the A4 sheet afterwards by the affine map of Section~\ref{sec:ctm_normalization}.
 The detector input is the preview scaled to fit the tensor and padded with bars.
 For a preview of $W_{\text{img}} \times H_{\text{img}}$ pixels, the scale and the padding on each side are:
 \begin{equation}
-\label{eq:preview_padding}
-W_{\text{pad}} = 640 - r W_{\text{img}}, \quad H_{\text{pad}} = 640 - r H_{\text{img}}
+\label{eq:preview_scale_ratio}
+r = \min\left( \frac{640}{W_{\text{img}}}, \frac{640}{H_{\text{img}}} \right)
 \end{equation}
 \begin{equation}
-\label{eq:preview_scale_ratio}
-r = \min\left( \frac{640}{W_{\text{img}}}, \frac{640}{H_{\text{img}}} \right), \quad p_x = \frac{640 - r W_{\text{img}}}{2}, \quad p_y = \frac{640 - r H_{\text{img}}}{2}
+p_x = \frac{640 - r W_{\text{img}}}{2}, \quad p_y = \frac{640 - r H_{\text{img}}}{2}
 \end{equation}
-For an A4-sized source previewed at $150\text{ DPI}$ ($1240 \times 1754\text{ px}$), $r = 640/1754 \approx 0.3649$, the scaled width is $452\text{ px}$, and the left padding is $p_x = 94\text{ px}$.
+For an A4-sized source previewed at $150\text{ DPI}$ ($1240 \times 1754\text{ px}$), $r = 640/1754 \approx 0.3649$, the scaled width is $452.45\text{ px}$, $p_x\approx93.77\text{ px}$, and $p_y=0$. Skipping the padding step would shift every box about 94 px horizontally.
 Preview pixels are converted to points on the displayed source page by the resolution ratio:
 \begin{equation}
 \label{eq:pixel_to_points}
 x_{\text{pt}} = x_{\text{img}} \cdot \frac{72}{150}, \quad y_{\text{pt}} = y_{\text{img}} \cdot \frac{72}{150}
 \end{equation}
-PyMuPDF and the raster both start at the top-left, so no vertical flip is needed at this step.
-Finally, points are mapped to the A4 sheet by Equation~(3.5.6).
+PyMuPDF and the raster both start at the top-left, so no vertical flip is needed at this step. Finally, a box $[x_{\min},y_{\min},x_{\max},y_{\max}]$ is carried to the A4 sheet by passing two opposite corners through the affine map of Section~\ref{sec:ctm_normalization} and taking the component-wise minimum and maximum, which restores an axis-aligned box. Regions cropped for OCR use the same chain: the crop origin $(x_0,y_0)$ is added to crop coordinates, and the result is then treated as a preview pixel.
 
 \subsection{Dynamic Stamp Placement via Constrained 2D Grid Search}
 \label{sec:dynamic_stamp_placement}
@@ -530,10 +589,6 @@ The endorsement stamp measures $43 \times 18\text{ mm}$ ($121.890 \times 51.024\
 
 Marking occupied cells. Each obstacle box $B_k = [x_k, y_k, w_k, h_k]$ in the working frame is enlarged by a safety margin $\delta_p = 15\text{ pt}$ on every side, and one is added to every grid cell the enlarged box touches, $\mathbf{G}[i][j] \leftarrow \mathbf{G}[i][j] + 1$, for all indices in:
 \begin{equation}
-\label{eq:obstacle_dilation}
-B_k' = [x_k - \delta_p, y_k - \delta_p, w_k + 2\delta_p, h_k + 2\delta_p]
-\end{equation}
-\begin{equation}
 \label{eq:row_range}
 i_{\min}^{(k)} = \max\left(0, \left\lfloor \frac{y_k - \delta_p}{g} \right\rfloor\right), \quad i_{\max}^{(k)} = \min\left(N_r - 1, \left\lfloor \frac{y_k + h_k + \delta_p}{g} \right\rfloor\right)
 \end{equation}
@@ -554,12 +609,12 @@ The top-left cell $(i, j)$ of a candidate stamp is restricted to:
 i \in [\lfloor \zeta_r N_r \rfloor, N_r - \nu_r - 1], \quad j \in [\lfloor \zeta_c N_c \rfloor, N_c - \nu_c - 1]
 \end{equation}
 with $\zeta_r = 0.77$ and $\zeta_c = 0.50$.
-For $\ell = 0$ this gives $i \in [43, 51]$ and $j \in [19, 29]$, which is 99 candidate positions.
+For $\ell = 0$ this gives $i \in [43, 51]$ and $j \in [19, 29]$, which is 99 candidates. For $\ell = 1$ it gives $i \in [30, 34]$ and $j \in [28, 46]$, which is 95 candidates. Column 19 begins at 285 pt, which is 47.9\% of the page width, so the region is approximately the right half rather than strictly so.
 
 Scoring. For each candidate the engine computes the collision count $n(i, j)$, the number of occupied marks under the stamp, and the clearance $d(i, j)$, the distance from the stamp center to the nearest occupied cell:
 \begin{equation}
 \label{eq:clearance_distance}
-d(i, j) = \min_{\{(u, v) : \mathbf{G}[u][v] > 0\}} \sqrt{(u - \bar{i})^2 + (v - \bar{j})^2}, \quad (\bar{i}, \bar{j}) = \left( i + \frac{\nu_r}{2}, j + \frac{\nu_c}{2} \right)
+n(i, j) = \min_{\{(u, v) : \mathbf{G}[u][v] > 0\}} \sqrt{(u - \bar{i})^2 + (v - \bar{j})^2}, \quad (\bar{i}, \bar{j}) = \left( i + \frac{\nu_r}{2}, j + \frac{\nu_c}{2} \right)
 \end{equation}
 \begin{equation}
 \label{eq:collision_count}
@@ -572,164 +627,305 @@ The score of a candidate, to be minimized, is:
 \label{eq:objective_cost_function}
 J(i, j) = \lambda n(i, j) + \frac{\mu}{d(i, j) + 1}
 \end{equation}
-where $\lambda = 10{,}000$ represents an obstacle collision penalty weight and $\mu = 50$ represents a clearance proximity weight \cite{ref57}.
-Ties are broken by distance to the bottom-right corner:
+where $\lambda=10{,}000$ represents an obstacle collision penalty weight and $\mu=50$ represents a clearance proximity weight. The substantial disparity between $\lambda$ and $\mu$ establishes a strict lexicographical optimization order: because the maximum value of $\mu/(d+1)$ is bounded by 50, any candidate incurring even a single cell collision ($n\geq1$, yielding $J\geq10{,}000$) is strictly penalized relative to any collision-free candidate ($n=0$, where $J\leq50$).
 \begin{equation}
 \label{eq:tie_breaking_argmin}
 D_{BR}(i, j) = \sqrt{(N_r - 1 - i)^2 + (N_c - 1 - j)^2}, \quad (i^*, j^*) = \operatorname*{argmin}_{(i, j)} (J(i, j), D_{BR}(i, j))
 \end{equation}
 The two values are compared in that order.
-On a blank page every candidate has $d = \max(N_r, N_c)$, so the candidate closest to the bottom-right corner wins.
-Fallback and output. If $n(i^*, j^*) > 0$, no clean space exists in the region.
-The stamp is placed at the candidate of minimum $n$, and the page is flagged for operator inspection.
-If $n(i^*, j^*) = 0$, the stamp is clean, and the engine outputs the top-left coordinate $(x^*, y^*) = (g \cdot j^*, g \cdot i^*)$ in the working frame.
-Cost. Each candidate sums $\nu_c \times \nu_r = 36$ cells and scans the grid for the clearance, so a page costs on the order of $99 \times 36 \approx 3{,}600$ cell reads, which executes in under 2 milliseconds in memory.
+On a blank page every candidate has $d = \max(N_r, N_c)$, so the tie-break places the stamp at the extreme bottom-right candidate.
+
+\textbf{Fallback and output.} If $n(i^*,j^*)>0$, no clean space exists in the region. The stamp is placed at the least-overlapping candidate and a \texttt{needs\_review} flag is written to the audit manifest for human inspection. The chosen rectangle $[j^*g,i^*g,\nu_cg,\nu_rg]$ is returned as $(x, y, \phi)$. For $\ell = 0$ the rotation is $\phi = 0^\circ$ and the rectangle is already on the A4 sheet. For $\ell = 1$ the rectangle is mapped to the A4 sheet by $\mathbf Q_1$ on its corners, so it becomes $\nu_r$ columns wide and $\nu_c$ rows high, and the stamp is rotated $\phi = 90^\circ$ counter-clockwise so that it reads upright when the page is viewed as landscape.
+
+\textbf{Cost.} Each candidate sums $\nu_c\times\nu_r=36$ cells and scans the grid for the clearance, so a page costs on the order of $99\times(36+N_cN_r)$ elementary operations. That is a few hundred thousand, negligible next to detection and OCR. The same procedure, with its own footprint and margin region, places pagination marks; only the endorsement stamp is derived here.
 
 \subsection{Asset-to-Checklist Matching and Sequence Inversion Verification}
 \label{sec:checklist_matching}
 
-The compliance engine checks that the uploaded documents cover the checklist required by the Bids and Awards Committee (BAC) and reports missing items, extra items, and items out of order.
-Checklist model. Let $U = \{u_1, \dots, u_m\}$ be the uploaded document units, where a unit is a whole file or, when one file bundles several items, the page range that Component 4 assigns to one item.
-Let $\mathcal{C} = \{c_1, \dots, c_k\}$ be the ordered checklist, where each requirement is the tuple:
+The compliance engine checks that uploaded bidder documents cover every mandatory entry in the Bids and Awards Committee (BAC) checklist under Republic Act No. 12009 and follow the prescribed order. It runs four coupled operations: (1) OCR-tolerant text similarity for titles and keywords. (2) Region-gated, exact-match extraction of dates and contract counts. (3) Maximum-weight one-to-one slot assignment. (4) Sequence disorder measurement.
+
+The first operation tolerates OCR noise, because titles and keywords can be matched approximately. The second does not, because a date that is off by one digit is a different date.
+
+\textbf{Checklist model.} Let $U = \{u_1,\ldots,u_m\}$ be the uploaded document units. Each unit is a standalone file or an isolated page range inside a bundled file. Let $C = \{c_1,\ldots,c_k\}$ be the ordered checklist extracted from Section VIII of the Philippine Bidding Documents. Each requirement is a five-tuple:
 \begin{equation}
 \label{eq:checklist_tuple}
-c_j = (\text{Title}_j, \mathcal{K}_j, \mathcal{Y}_j, M_j, n_j)
+c_j=(\operatorname{Title}_j,\mathcal K_j,\mathcal Y_j,M_j,n_j).
 \end{equation}
-$\text{Title}_j$ is the official title.
-$\mathcal{K}_j$ is a set of required keywords.
-$\mathcal{Y}_j$ is the set of layout classes the document must contain (such as signatures and seals for affidavits).
-$M_j \in \{0, 1\}$ marks whether the entry is mandatory, and $n_j \ge 1$ is the expected number of documents for that entry.
-Most entries have $n_j = 1$.
-The entry for ongoing projects is the exception: its $n_j$ is the number of contracts the bidder claims.
+\begin{itemize}
+\item $\operatorname{Title}_j$: the official requirement heading.
+\item $\mathcal K_j$: the set of required keywords.
+\item $\mathcal Y_j$: the set of required layout classes, e.g. \{Signature\_Block, Official\_Seal\} for a sworn affidavit.
+\item $M_j\in\{0,1\}$: 1 marks a mandatory entry.
+\item $n_j\geq1$: the expected document count.
+\end{itemize}
+Most entries have $n_j=1$. The ongoing-contracts entry sets $n_j$ to the number of contracts listed in the bidder's Statement of All Ongoing Contracts, read at run time by RapidOCR (see Contract Count below). Each requirement expands into $n_j$ slots $(j,r)$, $1\leq r\leq n_j$, giving $k'=\sum n_j$ slots with ordinal positions:
+\begin{equation}
+\label{eq:slot_position}
+q(j,r)=\sum_{j'<j}n_{j'}+r.
+\end{equation}
 
-Match score. A document $u_i$ is compared with a requirement $c_j$ through a score in $[0, 1]$ that combines title similarity, keyword coverage, and layout conformity:
+\textbf{OCR-Aware Weighted Edit Distance.} RapidOCR makes predictable character substitutions (e.g. ``0'' read as ``O'', ``1'' as ``I'' or ``l'', ``5'' as ``S'') and may split or merge tokens. Unweighted Levenshtein distance charges each of these a full cost of 1.0, so a short token such as ``BIR'' read as ``B1R'' can fall below the acceptance threshold. Following the reduced-cost idea of Ha (2019), the edit cost between characters $a$ and $b$ is:
+\begin{equation}
+\label{eq:ocr_edit_cost}
+\delta(a,b)=
+\begin{cases}
+0, & a=b,\\
+0.1, & (a,b)\in\Omega_{\mathrm{OCR}},\ \text{or }a=\epsilon,\ b\in\Sigma_{\mathrm{sep}},\\
+0.1, & b=\epsilon,\ a\in\Sigma_{\mathrm{sep}},\\
+1.0, & \text{otherwise}.
+\end{cases}
+\end{equation}
+$\Omega_{\mathrm{OCR}}$ is a symmetric set of common confusion pairs, and $\Sigma_{\mathrm{sep}}$ is the set of whitespace and punctuation characters. The weighted distance $d_w$ is the minimum total cost of edits that turn one string into the other. The normalized similarity is:
+\begin{equation}
+\label{eq:weighted_similarity}
+\operatorname{Sim}_w(x,y)=1-\frac{d_w(x,y)}{\max(|x|,|y|)}.
+\end{equation}
+Example: ``2O26'' against ``2026'' gives $1-0.1/4=0.975$ instead of $0.75$.
+
+Ha's confusion list, which this study starts from, is O/0, l/1, s/5, z/2 and m/n. Any pair added beyond Ha's list (such as 8/B) enters $\Omega_{\mathrm{OCR}}$ only if it appears in the OCR errors observed on the validation split. $\operatorname{Sim}_w$ is used only for titles and keywords. It is never applied to dates or counts.
+
+\textbf{Exact-Match Extraction of Dates.} Türkmen et al. (2025) found that image preprocessing usually lowered OCR accuracy on official documents, and that taking the latest date on a page fails when several dates are equally prominent \cite{docxb2}. This study therefore adopts four rules.
+
+\textbf{Rule 1: No preprocessing.} Cropped text regions go to RapidOCR as detected, without binarization, thresholding or morphological filtering.
+
+\textbf{Rule 2: Region and anchor gating.} A date is searched only inside the Text\_Paragraph regions of the unit, and only in the text window following an anchor phrase.
+
+\begin{table}[H]
+\centering
+\caption{Date roles and anchor phrases}
+\label{tab:date_anchors}
+\begin{tabular}{p{3.6cm}p{2cm}p{7.4cm}}
+\toprule
+\textbf{Role} & \textbf{Anchor set} & \textbf{Example anchor phrase} \\
+\midrule
+Execution date & $\Lambda_{\mathrm{exec}}$ & ``hereunto set my hand this'' \\
+Jurat (notarization) date & $\Lambda_{\mathrm{jur}}$ & ``Subscribed and sworn to before me'' \\
+Credential validity & $\Lambda_{\mathrm{val}}$ & ``valid until'', ``expires on'', ``validity'' \\
+Notary commission expiry & $\Lambda_{\mathrm{com}}$ & ``commission expires'', ``commission valid until'' \\
+\bottomrule
+\end{tabular}
+\end{table}
+Anchor phrases are text, so they are matched with $\operatorname{Sim}_w$ at threshold $\theta_k$. A date that follows a $\Lambda_{\mathrm{com}}$ anchor is labeled a commission date and is never used as an execution or jurat date. This avoids the ``latest date wins'' failure, because a commission expiry is later than the execution date on every sworn affidavit.
+
+\textbf{Rule 3: Date grammar.} Candidate spans must match one of the formats in $G_{\mathrm{date}}$, which extends the pattern set of Türkmen et al. with Philippine affidavit wording.
+
+\begin{table}[H]
+\centering
+\caption{Accepted date formats}
+\label{tab:date_formats}
+\begin{tabular}{p{6.2cm}p{7cm}}
+\toprule
+\textbf{Format} & \textbf{Example} \\
+\midrule
+Numeric, separators / - . or space, optional leading zeros & 5/3/2026, 05-03-2026, 5.3.2026 \\
+ISO & 2026-03-05 \\
+Written month, either order & March 5, 2026, 5 Mar.\ 2026 \\
+Affidavit wording, ordinal in words or digits & this fifth day of March 2026, this 5th day of March, 2026 \\
+\bottomrule
+\end{tabular}
+\end{table}
+Ordinal words (first to thirty-first) map to day numbers 1 to 31. Month names match exactly (case-insensitive) against full names and standard abbreviations.
+
+\textbf{Rule 4: Context-gated character repair.} OCR homoglyphs are repaired only inside numeric slots of the date grammar. The numeric slots accept the character class \texttt{[0-9 O o I l S Z B]}, and the repair map applies only there:
+\begin{equation}
+\label{eq:numeric_repair}
+\phi_{\mathrm{num}}:\ \{O,o\}\mapsto0,\quad\{I,l\}\mapsto1,\quad S\mapsto5,\quad Z\mapsto2,\quad B\mapsto8
+\end{equation}
+It is never applied to month names or other words. Without this gate, ``SEPTEMBER'' would be corrupted into ``5EPTEMBER''. The repair is a fixed character mapping, not fuzzy matching, so the result must still pass strict validation. A date repaired by $\phi_{\mathrm{num}}$ is recorded as \texttt{ocr\_corrected = true} in the audit ledger.
+
+
+
+\textbf{Date Validation and Decision.} A parsed date is accepted only if it is a real calendar date: month 1 to 12, a valid day for that month (including leap years), and a year inside a plausible window. Numeric dates such as 05/03/2026 can be read day-first or month-first. If both readings are valid and give different dates, the date is marked ambiguous and sent for operator review instead of being guessed.
+
+For a unit, the extracted date for a role is defined only when exactly one valid, unambiguous date is found in the window after the anchor:
+\begin{equation}
+\label{eq:date_role}
+d_{\mathrm{role}}(u_i)=
+\begin{cases}
+d, & |\mathcal D_{\mathrm{role}}(u_i)|=1\ \text{and the date is unambiguous},\\
+\text{undefined}, & \text{otherwise}.
+\end{cases}
+\end{equation}
+Here $\mathcal D_{\mathrm{role}}(u_i)$ is the set of valid dates found after anchors of that role. With $d_{\mathrm{open}}$ as the tender opening date, the audit outcome is:
+\begin{equation}
+\label{eq:date_status}
+\operatorname{Status}(u_i)=
+\begin{cases}
+\text{Fail}, & \begin{aligned}[t]
+&d_{\mathrm{jur}}>d_{\mathrm{open}}\ \text{(post-dated jurat) or}\\
+&v<d_{\mathrm{open}}\ \text{(expired credential, validity date }v\text{)},
+\end{aligned}\\
+\text{Warning}, & d_{\mathrm{role}}\text{ undefined, ambiguous, or OCR confidence}<\theta_c,\\
+\text{Pass}, & \text{otherwise}.
+\end{cases}
+\end{equation}
+A date that cannot be read or validated is flagged. It is never passed silently. $\theta_c$ is an OCR confidence threshold tuned on the validation split. Date accuracy is reported by exact match and by character error rate (Section~\ref{sec:eval_statutory_audit}).
+
+\textbf{Contract Count for Ongoing Contracts.} The count $n_j$ is read from the Table\_Grid region of the Statement of All Ongoing Contracts. Numeric tokens in that region pass through the same gated repair $\phi_{\mathrm{num}}$ before the row-counting rule is applied. The count is compared with the true count in Test 4 (Section~\ref{sec:eval_checklist_matching}).
+
+\textbf{Multimodal Compatibility Scoring.} Open item: specify the exact row-counting rule you implemented (for example, counting numbered rows or contract-number patterns). Your draft did not say how it works.
+
+Each unit $u_i$ is scored against each requirement $c_j$:
 \begin{equation}
 \label{eq:match_score_combination}
-S(u_i, c_j) = w_1 \cdot T_{ij} + w_2 \cdot K_{ij} + w_3 \cdot Y_{ij}, \quad w_1 + w_2 + w_3 = 1, \quad w_1, w_2, w_3 \ge 0
+S(u_i,c_j)=w_1T_{ij}+w_2K_{ij}+w_3Y_{ij},\quad \sum_{h=1}^{3}w_h=1,\quad w_h\ge0.
 \end{equation}
-\begin{equation}
-\label{eq:weights_constraint}
-w_1 + w_2 + w_3 = 1, \quad w_1, w_2, w_3 \ge 0
-\end{equation}
-\begin{equation}
+The initial validation weights are $w_1=0.40$, $w_2=0.35$ and $w_3=0.25$. The three terms are (Eq.~\eqref{eq:title_levenshtein} to \eqref{eq:layout_conformity}):
+\begin{align}
 \label{eq:title_levenshtein}
-T_{ij} = 1 - \frac{\text{Lev}(t_i, \text{Title}_j)}{\max(|t_i|, |\text{Title}_j|)}
-\end{equation}
-\begin{equation}
+T_{ij} &= \operatorname{Sim}_w(t_i,\operatorname{Title}_j),\\
 \label{eq:keyword_coverage}
-K_{ij} = \frac{1}{|\mathcal{K}_j|} \sum_{w \in \mathcal{K}_j} \mathbf{1}\left[ \max_{v \in V_i} \text{Sim}(w, v) \ge \theta_k \right]
-\end{equation}
-$Y_{ij} = |\mathcal{Y}_j \cap \mathcal{D}_i| / |\mathcal{Y}_j|$.
-$T_{ij}$ is the normalized Levenshtein similarity between the OCR header string $t_i$ of $u_i$ and the official title.
-$K_{ij}$ is the share of required keywords that appear in the OCR tokens $V_i$ of $u_i$; $\text{Sim}$ is the normalized Levenshtein similarity, and $\theta_k = 0.85$ allows for OCR character errors.
-$Y_{ij}$ is the share of required layout classes that the detector found in $u_i$ (the set $\mathcal{D}_i$), with $Y_{ij} = 1$ if $\mathcal{Y}_j$ is empty.
+K_{ij} &= \frac{1}{|\mathcal K_j|}\sum_{w\in\mathcal K_j}\mathbf1\!\left[\max_{v\in V_i}\operatorname{Sim}_w(w,v)\ge\theta_k\right],\\
+\label{eq:layout_conformity}
+Y_{ij} &= \frac{|\mathcal Y_j\cap\mathcal D_i|}{|\mathcal Y_j|}.
+\end{align}
+$t_i$ is the OCR header string of the unit ($T_{ij}=0$ if none is detected).
 
-Assignment. Each document may fill at most one slot and each slot at most one document, so two similar uploads do not collapse into the same requirement.
-Entry $c_j$ provides $n_j$ identical slots $(j, 1), \dots, (j, n_j)$.
-The engine sets an acceptance threshold $\tau = 0.60$ and runs the Hungarian algorithm on the bipartite graph between $U$ and the slots:
+$V_i$ is the set of OCR tokens in the unit, and $\theta_k=0.80$.
+
+$\mathcal D_i$ is the set of layout classes YOLOv8 detected on the unit ($Y_{ij}=1$ if $\mathcal Y_j$ is empty).
+
+\textbf{One-to-One Bipartite Slot Assignment.} Each document fills at most one slot, and each slot accepts at most one document. Scores below $\tau=0.65$ are zeroed first:
 \begin{equation}
 \label{eq:hungarian_assignment}
-\tilde{S}_{i, (j, r)} = \begin{cases} S(u_i, c_j), & S(u_i, c_j) \ge \tau \\ 0, & \text{otherwise} \end{cases}, \quad A^* = \operatorname*{argmax}_A \sum_{(i, \sigma) \in A} \tilde{S}_{i, \sigma}
+\tilde S_{i,(j,r)}=\begin{cases}S(u_i,c_j),&S(u_i,c_j)\ge\tau,\\0,&\text{otherwise},\end{cases}
+\qquad A^*=\operatorname*{argmax}_{A}\sum_{(i,\sigma)\in A}\tilde S_{i,\sigma}.
 \end{equation}
-The maximum runs over all sets $A \subseteq U \times \mathcal{S}$ in which no document and no slot appears twice.
-This is a maximum-weight bipartite matching solved in polynomial time $\mathcal{O}((|U| + |\mathcal{S}|)^3)$.
-A slot of an entry with $M_j = 1$ that has no accepted pair is logged as a Missing Document Defect.
-An uploaded document with no accepted pair is logged as an extraneous submission.
-An accepted pair $(u_a, \text{slot})$ for entry $c_j$ is flagged for operator review if the best other document score is close: $\max_{b \neq a} S(u_b, c_j) \ge S(u_a, c_j) - 0.10$.
+$A$ ranges over valid one-to-one matchings. Padding the matrix to $\max(m,k')$ lets the Hungarian (Kuhn--Munkres) algorithm solve it in $\mathcal O(\max(m,k')^3)$ time. Pre-thresholding keeps the problem solvable when an attachment is absent. Dropping zero-weight pairs gives three outcomes:
+\begin{itemize}
+\item A mandatory slot ($M_j=1$) with no accepted pair is a Missing Document Defect.
+\item An unassigned unit is an Extraneous Submission.
+\item An accepted pair $(u_a,\text{slot})$ whose score exceeds the best other document's score by less than $\delta=0.08$ is flagged for Operator Review.
+\end{itemize}
 
-Order verification. Documents matched to the same entry are interchangeable, so they are assigned to that entry's slots in upload order and are not counted as out of order among themselves.
-Let $A$ be the accepted pairs, $m_a = |A|$, and $Q = (q_1, \dots, q_{m_a})$ the prescribed positions of the accepted documents listed in the order in which they were uploaded.
-Two measures describe how far $Q$ is from sorted:
+\textbf{Sequence Inversion and Relocation Verification.} For multi-slot requirements ($n_j>1$), matched documents are interchangeable and keep their upload order. Let $m_a = |A^*|$ and let $Q = (q_1,\ldots,q_{m_a})$ be the prescribed positions of the accepted documents in upload order. Disorder is measured by:
 \begin{equation}
 \label{eq:order_verification_metrics}
-\text{Inv}(Q) = |\{ (a, b) : a < b \wedge q_a > q_b \}|, \quad \text{Moves}(Q) = m_a - \text{LIS}(Q)
+\operatorname{Inv}(Q)=\left|\{(a,b):1\le a<b\le m_a\ \land\ q_a>q_b\}\right|,\qquad
+\operatorname{Moves}(Q)=m_a-\operatorname{LIS}(Q).
 \end{equation}
-$\text{Inv}(Q)$ is the number of inversions, the number of pairs that must be swapped to sort $Q$.
-$\text{LIS}(Q)$ is the length of the longest strictly increasing subsequence of $Q$, so $\text{Moves}(Q)$ is the minimum number of elements that must be moved to make the sequence increasing.
-An interface alert is raised whenever $\text{Inv}(Q) > 0$.
+$\operatorname{Inv}(Q)$ counts inverted pairs. $\operatorname{LIS}(Q)$ is the length of the longest strictly increasing subsequence, found in $\mathcal O(m_a\log m_a)$ time by patience sorting. Documents in the LIS stay in place, so $\operatorname{Moves}(Q)$ is the minimum number of single-document relocations needed to sort the package.
+
+\section{Document Layout Detector Training Methodology}
+\label{sec:detector_training}
+
+The document layout detector will be developed through transfer learning and evaluated on an annotated corpus of Philippine bidding documents. The procedure comprises dataset preparation, annotation, partitioning, model fine-tuning, validation, and export for CPU deployment. Training and model selection will be conducted locally, while the final detector will be evaluated as part of the integrated system under the protocols in Section~\ref{sec:test_and_evaluation}.
+
+\subsection{Dataset Preparation and Annotation}
+\label{sec:training_dataset}
+
+The training corpus will consist of native digital documents and scanned copies collected from bid dossiers, as described in Section~\ref{sec:eval_dataset}. These documents will represent variations in page layout, document type, and scan quality that may affect the detection of textual and non-textual elements. Documents will be obtained with the permission of their contributors, and sensitive information not needed for the study will be redacted before annotation.
+
+Document pages will be annotated with bounding boxes corresponding to the four layout classes used by the proposed detector:
+\begin{itemize}
+    \item \textbf{Signature\_Block:} visible signature marks in designated signing or execution areas.
+    \item \textbf{Official\_Seal:} visible seals and other official marks.
+    \item \textbf{Table\_Grid:} tabular regions, including schedules and itemized information.
+    \item \textbf{Text\_Paragraph:} blocks of printed or typewritten text.
+\end{itemize}
+A written annotation rubric will define how boundaries are drawn and how overlapping elements are labeled. For example, a seal overlapping a paragraph may be annotated separately from the text region so that both remain represented in the ground truth. The visibility and condition of signatures and seals will be considered during annotation; their detection will indicate the presence of a visual mark, not establish its authenticity.
+
+Annotation quality will be assessed through independent labeling of the test partition by two annotators, followed by review of disagreements. Agreement in class labels and the spatial overlap of matched boxes will be reported separately, as described in Section~\ref{sec:eval_dataset}.
+
+\subsection{Dataset Partitioning}
+\label{sec:training_partition}
+
+The annotated corpus will be divided into training, validation, and test sets at the bid-dossier level. Pages from the same dossier will remain in one partition because they may share layouts, typography, and scanning characteristics. Reused source documents and identifiable copies will also be kept within the same partition where possible to reduce the risk of related material appearing in both training and evaluation sets.
+
+The training set will be used to adjust the detector's parameters. The validation set will support configuration, model selection, and decisions made during development. The test set will be reserved for final evaluation after the model configuration has been selected. The resulting allocation and the distribution of document-quality tiers and layout classes will be documented with the experimental results.
+
+\subsection{Pretrained Model and Fine-Tuning}
+\label{sec:training_finetuning}
+
+The detector will be initialized from a compatible YOLOv8s checkpoint pretrained on DocLayNet and fine-tuned using the annotated bidding document corpus \cite{ref9,ref30}. A publicly listed YOLO-DocLayNet checkpoint is a candidate for this initialization \cite{docxc1}. Document-layout pretraining provides an initial set of learned visual representations for page structures, while fine-tuning adapts the detector to the layout classes and document conditions covered by the study.
+
+Before training, the selected checkpoint will be checked for compatibility with the chosen training environment and documented with its source and license. Its original document-layout classes will be reviewed in relation to the four target classes. Because signature marks and official seals are not among DocLayNet's listed classes, their detection will depend on the annotations used during fine-tuning rather than on an assumption that the pretrained model already recognizes them \cite{ref9,docxc1}.
+
+Before fine-tuning, document pages will be prepared as images for the detector. Each page image will be resized to fit the proposed $640\times640$-pixel input while preserving its aspect ratio, with padding added where necessary. Its annotated bounding boxes will be transformed accordingly so that they remain aligned with the corresponding document regions. This preparation is consistent with the coordinate conversion described in Section~\ref{sec:coordinate_conversion}.
+
+Training will be conducted locally using available GPU-enabled personal computer. Image preparation and suitable augmentation may be applied to the training set to account for variations such as scan quality and minor page rotation. The selected settings will be documented after they have been tested against the available hardware and validation data.
+
+\subsection{Model Selection and Deployment}
+\label{sec:training_deployment}
+
+During fine-tuning, candidate checkpoints will be assessed using the validation set to support the selection of a model for final evaluation. The detector's performance will be examined across the four layout classes, including its ability to localize smaller visual elements such as signatures and seals as well as larger text and table regions.
+
+The selected model will be exported to ONNX format for execution on the target on-premise CPU environment \cite{ref32,ref33}. The exported model will be evaluated using the layout-detection protocol in Section~\ref{sec:eval_layout_segmentation} and the runtime and resource-utilization protocol in Section~\ref{sec:eval_latency_resource}.
 
 \section{Cost Breakdown and Expenditure}
 \label{sec:cost_breakdown}
+\setcounter{table}{0}
 
 \subsection{Development \& Hardware Expenditure}
 \label{sec:dev_expenditure}
 
-Table 3.6.1 details the initial capital expenditures required to establish the edge development environment.
+Table~\ref{tab:capital_expenditure} details the initial capital expenditures required to establish the edge development environment.
 
 \begin{table}[H]
 \centering
-\caption*{\textbf{Table 3.6.1}}
+\caption{Development and hardware expenditure}
 \label{tab:capital_expenditure}
 \begin{singlespace}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{p{5.5cm}p{3.5cm}ccr}
+\begin{tabular}{>{\raggedright\arraybackslash}p{5.5cm}>{\raggedright\arraybackslash}p{3.5cm}ccr}
 \toprule[1.5pt]
 \textbf{Resource Item / Particulars} & \textbf{Link} & \textbf{Quantity} & \textbf{Unit Price} & \textbf{Cost (PHP -- \textpeso)} \\
 \midrule[1.0pt]
-Vultr Cloud Compute (Regular 4vCPU, 8GB RAM, 160GB SSD, Manila Node) & \url{https://www.vultr.com/pricing/} & 3 months & \textpeso{}2,250.00 & \textpeso{}6,750.00 \\
-Printing Logistics (Testing Paper \& High-Yield Ink Consumables) & Office Procurement & 1 & \textpeso{}2,000.00 & \textpeso{}2,000.00 \\
-Physical Backup Storage (128GB High-Speed Flash Drive) & \url{https://shopee.ph/sandiskofficialstore} & 1 pc & \textpeso{}650.00 & \textpeso{}650.00 \\
-Open-Source Runtimes (Ubuntu Linux, FastAPI, PostgreSQL, Ghostscript) & Open Source Stack & 1 stack & \textpeso{}0.00 & \textpeso{}0.00 \\
-Google Cloud OAuth2 Single Sign-On (Developer Tier) & Google Cloud Console & 1 stack & \textpeso{}0.00 & \textpeso{}0.00 \\
+Vultr Cloud Compute (Regular performance plan: 4vCPU, 8 GB RAM, 160 GB SSD), Manila Node & \url{https://www.vultr.com/pricing/} & 3 months & \textpeso{}2,250.00 & \textpeso{}6,750.00 \\
+Printing Logistics (Testing Paper \& High-Yield Printer Ink Consumables) & Office Procurement & 1 & \textpeso{}2,000.00 & \textpeso{}2,000.00 \\
+Physical Backup Storage (128GB High-Speed Flash Drive) & \url{https://shopee.ph/sandiskofficialstore} & 1pc & \textpeso{}650.00 & \textpeso{}650.00 \\
+Open-Source Runtimes (Ubuntu Linux, FastAPI, PostgreSQL, Ghostscript) & & 1 stack & \textpeso{}0.00 (Open Source) & \textpeso{}0.00 (Open Source) \\
+Google Cloud OAuth2 Single Sign-On Service (Developer Tier) & & 1 stack & \textpeso{}0.00 (Free Tier) & \textpeso{}0.00 (Free Tier) \\
 \midrule[1.0pt]
-\multicolumn{4}{l}{\textbf{Total Estimated Capital Expenditure}} & \textbf{\textpeso{}9,400.00} \\
+\multicolumn{3}{l}{\textbf{Total Estimated Capital Expenditure}} & \textbf{\textpeso{}4,900.00} & \textbf{\textpeso{}9,400.00} \\
 \bottomrule[1.5pt]
 \end{tabular}%
 }
 \end{singlespace}
 \end{table}
 
-The total estimated expenditure reflects the initial capital requirements for hosting, training, and benchmarking the system without commercial third-party API dependencies.
 
 \section{Gantt Chart}
 \label{sec:gantt_chart}
+\setcounter{figure}{0}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.95\textwidth]{{figures/Figure 3.7}.png}
-\caption*{\textbf{Figure 3.7.1}}
-\label{fig_methodology_3_7_1}
+\caption{Gantt Chart}
+\label{fig:gantt_chart}
 \end{figure}
 
-Figure 3.7.1 illustrates the chronological Gantt chart and milestone execution timetable across the eight-month research and engineering lifecycle.
-The schedule partitions project execution into six core phases:
-\begin{enumerate}
-    \item \textbf{Phase 1: Dataset Acquisition and Annotation (Months 1--2):} Curate 500+ PBD document pages, perform Label Studio bounding box annotations across four target layout classes, and establish baseline train/val/test splits.
-    \item \textbf{Phase 2: Vision Model Training and ONNX Optimization (Months 2--3):} Fine-tune YOLOv8s from DocLayNet checkpoints, optimize CIoU/DFL loss parameters, export model to ONNX format, and benchmark CPU vector inference execution.
-    \item \textbf{Phase 3: Pipeline Engine and Rule Development (Months 4--5):} Implement Ghostscript Flate stream repair, RapidOCR targeted C-buffers, deterministic regex parsers, pre-flight statutory pass/fail rules, and non-occluding stamp placement algorithms.
-    \item \textbf{Phase 4: Workspace UI and Dual-Track Integration (Months 5--6):} Construct React staging interface, Framer Motion SVG overlays, Track 1 PyMuPDF CTM flattener, and Track 2 SHA-256 evidentiary digital packager.
-    \item \textbf{Phase 5: Empirical Evaluation and Testing (Months 6--7):} Execute benchmark experiments measuring mAP50, IoU collision rates, CPU latency, and manual vs. automated turnaround times.
-    \item \textbf{Phase 6: Final Manuscript and Thesis Defense (Month 8):} Consolidate empirical benchmarks, refine system documentation, and conduct final oral defense.
-\end{enumerate}
 
 \section{Test and Evaluation}
 \label{sec:test_and_evaluation}
+\setcounter{table}{0}
 
-This section defines the empirical tests that evaluate the proposed system against the objectives in Section 1.4.
+This section defines the empirical tests that evaluate the proposed system against the objectives in Section~\ref{sec:objectives}.
 Under the non-discretionary ``pass/fail'' standard of RA 9184 and RA 12009, a single overlooked documentary defect results in summary disqualification, so the plan reports error rates with confidence intervals and compares each module with a stated baseline.
 Each test subsection first defines its metrics and then gives the protocol: data, baselines, and statistical analysis.
 All confidence intervals are two-sided at 95\%, and all hypothesis tests use $\alpha = 0.05$.
 
 \begin{table}[H]
 \centering
-\caption*{\textbf{Table 3.8.1}}
+\caption{Test and evaluation matrix}
 \label{tab:evaluation_matrix}
 \begin{singlespace}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{cp{3.2cm}p{4.2cm}p{3.8cm}p{3.2cm}}
 \toprule[1.5pt]
-\textbf{Test} & \textbf{Testing Domain} & \textbf{Primary Metrics} & \textbf{Baseline / Reference} & \textbf{Statistical Method} \\
+\textbf{Test (Sec.)} & \textbf{Testing Domain} & \textbf{Primary Metrics} & \textbf{Baseline / Reference} & \textbf{Statistical Method} \\
 \midrule[1.0pt]
-1 (3.8.2) & Layout Segmentation & Precision, Recall, $\text{mAP}_{50}$, $\text{mAP}_{50-95}$, per-class AP & DocLayNet-pretrained YOLOv8s; COCO-pretrained YOLOv8s & File-level cluster bootstrap (1,000 iter.); per-file table \\
-2 (3.8.3) & Document Classification & Accuracy, Macro-$F_1$, confusion matrix & Magic Auto-Sort regex rules (filename only) & Wilson interval; exact McNemar test \\
-3 (3.8.4) & Statutory Pre-Flight Audit & Defect recall, false alarm rate, date exact match, CER & Fault-injection ground truth & Wilson interval; exact McNemar test \\
-4 (3.8.5) & Checklist Matching \& Order & Pair $F_1$, missing recall, false-missing rate, Moves, $d_K$ & Magic Auto-Sort; greedy matching on same score $S$ & Exact McNemar test; Wilcoxon signed-rank on $\Delta\text{Inv}$ \\
-5 (3.8.6) & Non-Occluding Stamping & Zero-collision rate, needs-review rate, silent-failure rate & Fixed bottom-right anchor (Static anchor baseline) & Exact McNemar test \\
-6 (3.8.7) & Geometry \& Coordinate Map & Upright-and-fit rate, registration error $\Delta E$ & Known synthetic ground truth & Wilson interval; mean, maximum $\Delta E$ \\
-7 (3.8.8) & Dual-Track Cryptography & SHA-256 equality, ByteRange digest validity, negative controls & Original source files & Deterministic check \\
-8 (3.8.9) & Edge Latency \& Memory & Per-stage time, P50, P95, PPM, peak RSS & Stage-wise latency budget & Descriptive percentiles \\
-9 (3.8.10) & End-to-End Turnaround & Turnaround time, minutes per 100 pages, clerical defect rate & Manual assembly & Mixed-effects model; paired $t$-test; Wilcoxon; Cohen's $d_z$ \\
-10 (3.8.11) & Workspace Usability & System Usability Scale (SUS) & Industry benchmark ($\text{SUS} = 68$) & One-sided one-sample $t$-test; Wilcoxon \\
+1 (\ref{sec:eval_layout_segmentation}) & Layout Segmentation & Precision, Recall, $\mathrm{mAP}_{50}$, $\mathrm{mAP}_{50-95}$, per-class AP & DocLayNet-pretrained YOLOv8s (shared classes); COCO-pretrained YOLOv8s fine-tuned on the same data & File-level cluster bootstrap (1,000 iter.); per-filetable \\
+2 (\ref{sec:eval_doc_classification}) & Document Classification & Accuracy, Macro-F1, confusion matrix & Magic Auto-Sort regex rules (filename only) & Wilson interval; exact McNemar test \\
+3 (\ref{sec:eval_statutory_audit}) & Statutory Pre-Flight Audit & Defect recall, false alarm rate, date exact match, CER & Fault-injection ground truth & Wilson interval; exact McNemar test (authentic vs. altered pair) \\
+4 (\ref{sec:eval_checklist_matching}) & Checklist Matching and Order & Missing-item recall, false-missing rate, pair precision/recall/F1, order accuracy ($\mathrm{Acc}_{\mathrm{ord}}$), Inv and Moves, $d_K$, ongoing-contract count accuracy and MAE & Magic Auto-Sort; greedy matching on the same score $S$ & Dossier-level cluster bootstrap; Wilson interval; exact McNemar on per-slot decisions; Wilcoxon signed-rank on Inv reduction \\
+5 (\ref{sec:eval_stamp_placement}) & Non-Occluding Stamping & Zero-collision rate, needs-review rate, silent-failure rate & Fixed bottom-right anchor (Static anchor baseline). & Exact McNemar \\
+6 (\ref{sec:eval_geom_normalization}) & Geometry and Coordinate Map & Upright-and-fit rate, registration error $\Delta E$ & Known synthetic ground truth & Wilson interval; mean, maximum $\Delta E$ \\
+7 (\ref{sec:eval_crypto_preservation}) & Dual-Track Cryptography & SHA-256 equality, ByteRange digest validity, negative controls & Original source files & Deterministic check \\
+8 (\ref{sec:eval_latency_resource}) & Edge Latency and Memory & Mean per-page perception time $\bar T_{\mathrm{perc}}$ (s), per-stage time, P50, P95, PPM, Peak RSS & Stage-wise latency budget ($<0.060$s combined perception) & Descriptive percentiles; file-level cluster bootstrap CI \\
+9 (\ref{sec:eval_turnaround}) & End-to-End Turnaround & Turnaround time, minutes per 100 pages, clerical defect rate & Manual assembly & Mixed-effects model; paired $t$-test and Wilcoxon signed-rank as sensitivity checks; Cohen's $d_z$ \\
+10 (\ref{sec:eval_usability}) & Workspace Usability & System Usability Scale (SUS) & Industry benchmark (SUS $=68$) & One-sided one-sample $t$-test; Wilcoxon \\
 \bottomrule[1.5pt]
 \end{tabular}%
 }
@@ -742,14 +938,34 @@ It stays inside 0 to 1 and is valid for small samples and for results near 0\% o
 \label{eq:wilson_interval}
 \frac{\hat{p} + \frac{z^2}{2n} \pm z\sqrt{\frac{\hat{p}(1-\hat{p})}{n} + \frac{z^2}{4n^2}}}{1 + \frac{z^2}{n}}, \quad z = 1.96
 \end{equation}
+\textbf{Wilcoxon signed-rank test.} A paired test on the ranks of the differences. It does not assume normality, which matters with 15 values.
+
+\textbf{Bootstrap.} Test dossiers are resampled with replacement 1,000 times, the metric is recomputed each time, and the 2.5th and 97.5th percentiles give the 95\% interval. Whole dossiers are resampled because pages of one dossier are alike. 1,000 resamples make the tail percentiles stable; with about six dossiers the width of the interval comes from the dossier count, not from the number of resamples.
+
+\textbf{Mixed-effects model.} It estimates the mean difference while allowing each preparer to have a different baseline speed, so repeated measures from one person are not treated as independent.
+
+\textbf{Descriptive percentiles.} For timing, P50 is the typical time and P95 is the time that 95\% of pages beat. No hypothesis test is used; results are compared with a set before the run.
 
 \subsection{Evaluation Dataset, Splits, Annotation, and Fault Injection}
 \label{sec:eval_dataset}
 
-The experimental corpus comprises 50 real Philippine bidding document dossiers collected across infrastructure, consulting, and goods procurements under RA 9184 and RA 12009.
-The dataset spans 1,250 total document pages exhibiting genuine scanning artifacts, non-standard page dimensions, skewed angles, faded notary stamps, and diverse corporate signatures.
-The corpus is partitioned into training (60\%), validation (20\%), and held-out testing (20\%) splits using file-level cluster stratification to prevent document leakage across partitions.
-To rigorously benchmark the statutory audit and defect detection engines, an automated fault-injection suite seeds clerical defects into copies of authentic dossiers, generating matched pairs with controlled omissions, expired jurats, missing signatures, and inverted checklist ordering.
+\textbf{Annotated corpus and splits.} The annotated corpus consists of at least 500 Philippine Bidding Document (PBD) pages, collected from at least 30 bid dossiers and annotated in Label Studio. It is partitioned at the dossier level, not the page level, because pages of one submission share typography, scanner calibration, and agency seals, and a page-level shuffle would leak information across splits.
+
+The validation split is used only to fix the parameters in Table 3.5.1 and the detector settings. The test split is never used for training or tuning; results are reported once, after the configuration is frozen. Test pages are stratified over three tiers: native digital PDFs (40\%), clean scans at 200--300 DPI (35\%), and degraded photocopies with skew up to $10^\circ$ (25\%). Because the number of test dossiers is small, dossier-level confidence intervals are expected to be wide and are reported as such.
+
+\textbf{Supplementary pool and workflow files.} Tests 2 and 3 need more samples than the held-out pages provide, so they also use a supplementary pool of authentic documents and execution pages from dossiers collected after the split and never used for training or tuning. Tests 8 and 9 use 10 workflow dossiers of 50 to 150 pages each (about 1,000 pages in total). These carry a checklist ground truth but need no layout annotation, and are likewise disjoint from the training and validation dossiers.
+
+\textbf{Annotation quality.} The classes Signature\_Block, Official\_Seal, Table\_Grid, and Text\_Paragraph are labeled following a written rubric. Two annotators label the test partition independently. Agreement is reported as Cohen's $\kappa$ on the class labels of boxes matched at IoU $\geq 0.50$ (target $\kappa \geq 0.85$), together with the mean IoU of the matched pairs. A third reviewer resolves disagreements.
+
+\textbf{Controlled fault injection.} Because fatal defects are rare in real compliant tenders, two programmatic mutation families create known ground truth:
+
+\textbf{Document-level mutations:} whiting out a signature line, removing a notary seal, moving a legal mark away from its signature block, and replacing a notarization date with an expired date, applied to execution pages of the Omnibus Sworn Statement (OSS) and Bid Securing Declaration (BSD).
+
+\textbf{Portfolio-level mutations:} deleting mandatory checklist items, swapping adjacent files, renaming files to random identifiers, and adding a decoy commercial form.
+
+Mutated pages and packages are synthetic, so they are easier than naturally occurring defects. This is reported as a limitation of Tests 3 and 4.
+
+\textbf{Privacy and consent.} Real bid documents contain personal data and commercial information. Corpus pages are obtained with the permission of the contributing firms, personal data not needed for the study are redacted before annotation, and the data stay on the local workstation. Participants in Tests 9 and 10 give informed consent, and results are reported without personal identifiers.
 
 \subsection{Deep Vision Layout Segmentation}
 \label{sec:eval_layout_segmentation}
@@ -766,8 +982,12 @@ An unmatched prediction is a False Positive, and an unmatched ground-truth box i
 \label{eq:precision_recall_metrics}
 \text{Precision} = \frac{\text{TP}}{\text{TP} + \text{FP}}, \quad \text{Recall} = \frac{\text{TP}}{\text{TP} + \text{FN}}
 \end{equation}
+\begin{equation}
+\label{eq:average_precision}
+\mathrm{AP}_c=\int_0^1 p_c(r)\,dr.
+\end{equation}
 
-Over the $C = 4$ semantic classes (\texttt{Signature\_Block}, \texttt{Official\_Seal}, \texttt{Table\_Grid}, and \texttt{Text\_Paragraph}), $\text{mAP}_{50}$ and $\text{mAP}_{50-95}$ (evaluated at thresholds $t \in \{0.50, 0.55, \dots, 0.95\}$) are calculated as:
+Over the $C=4$ classes, $\mathrm{mAP}_{50}$ and $\mathrm{mAP}_{50\text{--}95}$ (thresholds $t\in\{0.50,0.55,\ldots,0.95\}$) are:
 \begin{equation}
 \label{eq:map50_metric}
 \text{mAP}_{50} = \frac{1}{C} \sum_{c=1}^C \text{AP}_c @ 0.50
@@ -776,123 +996,236 @@ Over the $C = 4$ semantic classes (\texttt{Signature\_Block}, \texttt{Official\_
 \label{eq:map50_95_metric}
 \text{mAP}_{50-95} = \frac{1}{10} \sum_{t \in \{0.50, 0.55, \dots, 0.95\}} \frac{1}{C} \sum_{c=1}^C \text{AP}_c |_{\text{IoU} = t}
 \end{equation}
+\textbf{Protocol.} The fine-tuned YOLOv8s model, exported to ONNX and run on ONNX Runtime CPU, is evaluated on the held-out pages at $640\times640$ input with NMS IoU 0.45. AP and mAP are computed with a low confidence threshold ($\gamma=0.001$) so the full precision--recall curve is used. Operating-point precision and recall are reported separately at $\gamma=0.25$, the deployed threshold.
+
+Two baselines are compared. (i) The DocLayNet-pretrained YOLOv8s checkpoint is applied without fine-tuning and scored only on the classes it can predict, with the mapping Table $\to$ Table\_Grid and Text $\to$ Text\_Paragraph; it has no equivalent of Signature\_Block or Official\_Seal, so no baseline value exists for these two classes. (ii) A COCO-pretrained YOLOv8s fine-tuned on the same training split with the same settings is evaluated on all four classes, which isolates the effect of the document-layout initialization.
+
+Confidence intervals come from a file-level cluster bootstrap (1,000 resamples of the test dossiers), with a page-level bootstrap as a sensitivity check. Results are also reported separately for the three document tiers.
 
 \subsection{Automated Document Classification}
 \label{sec:eval_doc_classification}
 
-The classification module assigns each document unit to one of $K = 6$ regulatory categories (Omnibus Sworn Statement, Bid Securing Declaration, Mayor's Permit, Tax Clearance, Audited Financial Statements, and Technical Specifications).
-Macro-$F_1$ weights rare classes equally with frequent ones:
+The classification module assigns each document unit to one of $K=6$ classes. Macro-$F_1$ weights rare classes equally with frequent ones:
 \begin{equation}
 \label{eq:macro_f1}
-\text{Macro-}F_1 = \frac{1}{K} \sum_{k=1}^K F_{1, k}
+\text{Accuracy}=\frac{\sum_{k=1}^{K}TP_k}{N_{\mathrm{docs}}},\quad
+\text{Macro-}F_1 = \frac{1}{K} \sum_{k=1}^K \frac{2P_kR_k}{P_k+R_k}
 \end{equation}
-Performance is benchmarked against a baseline filename regex sorter using exact McNemar hypothesis testing.
+where $P_k$ and $R_k$ are the precision and recall of class $k$. A confusion matrix shows which classes are mistaken for which.
+
+\textbf{Protocol.} The classes are the Omnibus Sworn Statement, the Bid Securing Declaration, the Mayor's Permit, the Tax Clearance, the Audited Financial Statements, and the Technical Specifications. These are the document types the classifier is trained on; other checklist entries, such as the Statement of All Ongoing Contracts, are scored directly by the matcher of Section~\ref{sec:checklist_matching} and are tested in Checklist Matching and Order.
+
+The test set has at least 8 document units per class (about 60 in all), taken from the held-out dossiers and, where a class is short, from the supplementary pool. Each unit is classified under two conditions: with its original file name, and with a random identifier as the name, which tests the requirement that classification does not depend on file names. The baseline is the Magic Auto-Sort filename rules, extended with one keyword pattern per class so that it can emit all six labels; a file it cannot match is counted as an error.
+
+Accuracy is reported with a Wilson interval. The two systems are compared on the original-name condition with an exact McNemar test on the paired per-unit outcomes. Under the random-name condition the baseline is expected to fail by construction, so that result is reported as a descriptive reference rather than a significance test.
 
 \subsection{Pre-Flight Statutory Compliance Audit}
 \label{sec:eval_statutory_audit}
 
-The statutory compliance audit engine is evaluated on its ability to detect clerical defects on affidavit execution pages (OSS and BSD).
-Defect recall, precision, and false alarm rate (FAR) are defined as:
+The audit checks presence and co-location of signature blocks and seals and the validity of dates on execution pages. A page with a defect is the positive case, and a page flagged Fail or Warning counts as flagged.
 \begin{equation}
 \label{eq:defect_recall_far}
 \text{Recall}_{\text{defect}} = \frac{\text{TP}}{\text{TP} + \text{FN}}, \quad \text{Precision}_{\text{defect}} = \frac{\text{TP}}{\text{TP} + \text{FP}}, \quad \text{FAR} = \frac{\text{FP}}{\text{FP} + \text{TN}}
 \end{equation}
-A missed defect leads to summary disqualification while a false alarm costs a short manual check, so defect recall and FAR are the primary evaluation criteria.
-Dates extracted by OCR are scored by exact match and character error rate (CER):
+A missed defect leads to disqualification while a false alarm costs a short manual check, so defect recall and FAR are the primary measures. Defect precision depends on the share of altered pages, set at one half by design, so it is reported only for reference. Dates read by OCR are scored by exact match and by the character error rate:
 \begin{equation}
 \label{eq:cer_metric}
-\text{CER} = \frac{\text{Lev}(s_{\text{ocr}}, s_{\text{gt}})}{|s_{\text{gt}}|}
+\text{CER} = \frac{S+D+I}{N_{\text{ref}}}
 \end{equation}
+Here $S$, $D$ and $I$ are character substitutions, deletions and insertions, and $N_{\mathrm{ref}}$ is the length of the reference string.
+
+\textbf{Protocol.} The test set has at least 30 authentic OSS and BSD execution pages from dossiers outside training. Each authentic page is paired with one altered copy, so that there are at least 30 compliant and 30 altered instances. The altered copies cover the four fault types (whited-out signature, erased seal, non-co-located mark, and expired date) in roughly equal numbers, about 8 per type. With so few pages per fault type, results are reported by fault type only descriptively, and the statistical claims are made on the pooled counts.
+
+Recall and FAR are reported with Wilson intervals. For reference, a perfect 30 of 30 gives a lower 95\% Wilson bound of about 88.6\%, so any claim of near-complete recall is stated together with this bound. The authentic and altered copies of a page are compared with an exact McNemar test. Whited-out signatures and erased seals are cleaner than real unsigned or unsealed pages, so the results are an upper estimate for naturally occurring defects.
 
 \subsection{Checklist Matching and Order Verification}
 \label{sec:eval_checklist_matching}
 
-The checklist engine assigns documents to checklist slots with the Hungarian algorithm (Section 3.5.4).
-Assignment quality is measured by pair precision, recall, and $F_1$ against the ground-truth pairing.
-Completeness is measured by the recall and false-missing rate of the missing-item report:
+This test measures how well the compliance engine of Section~\ref{sec:checklist_matching} assigns documents to checklist slots, reports missing and extra documents, measures upload disorder, and counts ongoing contracts. Under the pass/fail standard, a missing-document defect is the costly error, so missing-item recall is the primary measure.
+
+\textbf{Slot assignment.} A pair $(u_i,\sigma)$ in the accepted set $A^*$ is a true positive if it matches the ground-truth pairing. Every other accepted pair is a false positive. Every ground-truth pair not in $A^*$ is a false negative. Pair precision, recall and F1 are:
+\begin{equation}
+\label{eq:slot_metrics}
+P_{\mathrm{slot}}=\frac{TP_{\mathrm{slot}}}{TP_{\mathrm{slot}}+FP_{\mathrm{slot}}},\quad
+R_{\mathrm{slot}}=\frac{TP_{\mathrm{slot}}}{TP_{\mathrm{slot}}+FN_{\mathrm{slot}}},\quad
+F_{1,\mathrm{slot}}=\frac{2P_{\mathrm{slot}}R_{\mathrm{slot}}}{P_{\mathrm{slot}}+R_{\mathrm{slot}}}.
+\end{equation}
+\textbf{Missing-item report.} The positive case is a mandatory slot ($M_j = 1$) that truly has no document. Missing-item recall is the share of truly missing slots the system reports. The false-missing rate is the share of present slots the system wrongly reports missing:
 \begin{equation}
 \label{eq:missing_item_metrics}
-\text{Recall}_{\text{missing}} = \frac{\text{TP}_{\text{missing}}}{\text{TP}_{\text{missing}} + \text{FN}_{\text{missing}}}, \quad \text{Rate}_{\text{false-missing}} = \frac{\text{FP}_{\text{missing}}}{\text{FP}_{\text{missing}} + \text{TN}_{\text{missing}}}
+R_{\text{miss}} = \frac{TP_{\text{miss}}}{TP_{\text{miss}} + FN_{\text{miss}}}, \quad \text{FMR} = \frac{FP_{\text{miss}}}{FP_{\text{miss}} + TN_{\text{miss}}}
 \end{equation}
-For accepted documents in upload order, order quality is reported by the inversion count $\text{Inv}(Q)$, minimum moves $\text{Moves}(Q) = m - \text{LIS}(Q)$, and normalized Kendall distance:
+A false-missing report costs a short manual check. A missed defect can cost the bid.
+
+\textbf{Order verification.} Over $N_{\mathrm{seq}}$ upload sequences, let $\widehat{\mathrm{Inv}}(Q_t)$ and $\widehat{\mathrm{Moves}}(Q_t)$ be the system counts, and $\mathrm{Inv}^*(Q_t)$ and $\mathrm{Moves}^*(Q_t)$ the reference counts. Exact agreement is:
+\begin{equation}
+\label{eq:order_accuracy}
+\mathrm{Acc}_{\mathrm{ord}}=\frac{1}{N_{\mathrm{seq}}}\sum_{t=1}^{N_{\mathrm{seq}}}
+\mathbf1\!\left[\widehat{\mathrm{Inv}}(Q_t)=\mathrm{Inv}^*(Q_t)\ \land\
+\widehat{\mathrm{Moves}}(Q_t)=\mathrm{Moves}^*(Q_t)\right].
+\end{equation}
+The normalized Kendall distance scales disorder from 0 (prescribed order) to 1 (fully reversed):
 \begin{equation}
 \label{eq:kendall_distance}
-d_K = \frac{\text{Inv}(Q)}{\frac{1}{2}m(m-1)} \in [0, 1]
+d_K(Q)=\frac{\mathrm{Inv}(Q)}{m_a(m_a-1)/2}.
 \end{equation}
+\textbf{Ongoing-contract count.} Over $N_{\mathrm{soc}}$ Statements of All Ongoing Contracts, with true count $n^{*(s)}$ and predicted count $\hat n^{(s)}$, exact accuracy and mean absolute error are:
+\begin{equation}
+\label{eq:contract_count_metrics}
+\mathrm{Acc}_{n_j}=\frac{1}{N_{\mathrm{soc}}}\sum_{s=1}^{N_{\mathrm{soc}}}\mathbf1[\hat n_j^{(s)}=n_j^{*(s)}],
+\quad
+\mathrm{MAE}_{n_j}=\frac{1}{N_{\mathrm{soc}}}\sum_{s=1}^{N_{\mathrm{soc}}}|\hat n_j^{(s)}-n_j^{*(s)}|.
+\end{equation}
+
+\textbf{Protocol.} Each held-out dossier (Section~\ref{sec:eval_dataset}) is converted into a verified complete package and mutated under three independent fault configurations. Every package receives (1) 1 to 3 deleted mandatory items, (2) 2 swapped adjacent files, (3) 1 decoy commercial form, (4) random file names.
+
+The document units come from the ground-truth segmentation, so this test measures the matcher, not the classifier. The matcher runs with the values fixed on the validation split ($w_1=0.40$, $w_2=0.35$, $w_3=0.25$, $\tau=0.65$, $\delta=0.08$, $\theta_k=0.80$). The final values are reported with the results. The packages cover native digital PDFs, clean scans (200--300 DPI) and degraded photocopies, and results are reported overall and by tier.
+
+The sub-tests below are labeled 4A to 4D.
+
+\textbf{Test 4A: Slot Assignment and Matching Ablation.} This test will measure how accurately the matcher assigns each document unit to its checklist slot, and which design choices contribute to that accuracy. Five configurations will be run on identical packages, so any difference in results comes from the matcher alone.
+
+The first configuration is Magic Auto-Sort, which uses file names only and represents the current tool. The second is an exact-regex matcher that requires literal string matches ($T_{ij}$ and $K_{ij}$ limited to 0 or 1) and has no layout term. It will show whether fuzzy matching is needed at all. The third is an unweighted Levenshtein matcher that charges 1.0 for every character edit and includes the layout term $Y_{ij}$. It will show the effect of the OCR-aware costs.
+
+The fourth configuration is greedy matching, in which each document takes its highest-scoring row on the same score $S$ without the one-to-one rule. It will show the effect of the Hungarian step. The fifth is the proposed matcher, which combines $\operatorname{Sim}_w$ (Eq.~\eqref{eq:weighted_similarity}) over $\Omega_{\mathrm{OCR}}$, the layout term $Y_{ij}$ and Hungarian assignment.
+
+$P_{\mathrm{slot}}$, $R_{\mathrm{slot}}$ and $F1_{\mathrm{slot}}$ will be computed for each configuration and reported overall and by document-quality tier. The 95\% confidence intervals will come from a dossier-level cluster bootstrap with 1,000 resamples. The proposed matcher will then be compared with each baseline on the per-slot decisions using an exact McNemar test.
+
+\textbf{Test 4B: Defect and Near-Tie Flagging.} This test will check whether the engine reports the right problems in a package, using the optimal assignment $A^*$. Three outputs will be scored separately.
+
+Missing Document Defects are mandatory slots ($M_j=1$) with no accepted pair. They are the most important output, so $R_{\mathrm{miss}}$ and FMR will be reported with Wilson intervals. Extraneous Submissions are units left unassigned, and they will be scored by precision and recall.
+
+Near-tie review flags are accepted pairs whose score margin over the runner-up is below $\delta$. A near-tie has no clean ground truth, so these will be judged by usefulness instead. The study will report the flag rate and compare the assignment error rate among flagged pairs with the rate among unflagged pairs. A flag is considered useful if flagged pairs contain clearly more mistakes than unflagged ones.
+
+\textbf{Test 4C: Sequence Inversion and Minimum Relocation.} This test will check that the order measures Inv and Moves are computed correctly, and that the proposed reordering leaves less disorder than the current tool. Fifty controlled upload orders will be generated across the test dossiers, with several orders per dossier.
+
+The orders will cover five cases: properly ordered packages ($\mathrm{Inv}^*=0$, $\mathrm{Moves}^*=0$), adjacent pair swaps, block inversions, interchangeable multi-slot attachments ($n_j>1$), and incomplete packages with gaps from missing slots.
+
+For each order, $\widehat{\mathrm{Inv}}(Q)$ and $\widehat{\mathrm{Moves}}(Q)$ will be checked against a brute-force oracle through $\mathrm{Acc}_{\mathrm{ord}}$, and $d_K$ will be reported per package. The proposed order, made by sorting accepted pairs by $q$, is correct whenever the pairing is correct, so it will not be scored on its own. Instead, the Inv left after applying each method's proposed order will be compared between the proposed system and Magic Auto-Sort, using a Wilcoxon signed-rank test on the per-package difference.
+
+\textbf{Test 4D: Ongoing-Contract Count.} This test will check how reliably the system reads the number of ongoing contracts, since that number sets how many slots the entry expands into. The Table\_Grid row-counting parser will run on every Statement of All Ongoing Contracts in the corpus. $\mathrm{Acc}_{n_j}$ will be reported with a Wilson interval, together with $\mathrm{MAE}_{n_j}$.
+
+The test will also measure what the gated repair $\phi_{\mathrm{num}}$ (Eq.~\eqref{eq:numeric_repair}) contributes. Both measures will be recorded before and after $\phi_{\mathrm{num}}$ is applied to numeric row-index tokens, ahead of counting. If natural OCR errors in row indices turn out to be too rare to show an effect, a synthetic set with injected homoglyph substitutions will also be run and reported separately.
 
 \subsection{Dynamic Non-Occluding Stamp Placement}
 \label{sec:eval_stamp_placement}
 
-The placement engine searches the lower-right region of the page (Section 3.5.3) for a position that minimizes cost $J$.
-Placement is audited against human-annotated ground-truth obstacle boxes $B_k^{\text{GT}}$, $k = 1, \dots, M$, drawn on the final A4 render of each page.
-The collision indicator is evaluated as:
+The placement engine searches the lower-right region of the page (Section~\ref{sec:dynamic_stamp_placement}) for a position that minimizes the cost $J$. Placement is audited against human-annotated ground-truth obstacle boxes $B_k^{\mathrm{GT}}$, $k=1..M$, drawn on the final A4 render of each page, not mapped through the Section~\ref{sec:ctm_normalization} affine transform, so that an error in the coordinate transform shows up as collisions instead of cancelling out. The collision test uses the full stamp rectangle of $121.890 \times 51.024$ pt at the returned position, with its width and height exchanged when $\phi = 90^\circ$, and not the $9 \times 4$ cell block:
 \begin{equation}
 \label{eq:collision_indicator}
-\text{Collision}(p) = \mathbf{1}\left[ \text{Area}\left( B_{\text{stamp}} \cap \bigcup_{k=1}^M B_k^{\text{GT}} \right) > 0 \right]
+\text{Collision}\iff\exists k\in\{1,\ldots,M\}:\ \operatorname{Area}(B_{\text{stamp}}\cap B_k^{\text{GT}})>0
 \end{equation}
-The primary evaluation metrics are the zero-collision rate, needs-review rate, and silent-failure rate:
+The measures are the zero-collision rate, the needs-review rate, and the silent-failure rate, which is the share of pages that collide but are not flagged:
 \begin{equation}
 \label{eq:collision_rates}
-R_{\text{zero-collision}} = \frac{N_{\text{zero-collision}}}{N_{\text{total}}}, \quad R_{\text{silent-failure}} = \frac{N_{\text{silent-failure}}}{N_{\text{total}}}
+\mathrm{ZCR}=\frac{N_{\text{zero-collision}}}{N_{\text{pages}}},\quad
+\mathrm{Rate}_{\text{review}}=\frac{N_{\text{flagged}}}{N_{\text{pages}}},\quad
+\mathrm{SFR}=\frac{N_{\text{collision}\land\text{not flagged}}}{N_{\text{pages}}}
 \end{equation}
+\textbf{Protocol.} The evaluation corpus comprises 150 held-out document pages spanning the three representation tiers, of which at least half are scanned photocopies and at least 30 exhibit landscape presentation ($\ell=1$). Where test dossiers contain insufficient natural landscape sheets, landscape test instances are constructed by assigning the orthogonal rotation tag to portrait pages, evaluating the coordinate zone mapping of Section~\ref{sec:dynamic_stamp_placement}. Two placement approaches are evaluated on each test page:
+
+\textbf{Baseline (Static Anchor):} A conventional hardcoded placement fixed at the extreme lower-right margin of the working frame, defined at coordinates $(W_f-w_s-20,H_f-h_s-20)$ pt, representing the standard behavior of commercial PDF document utilities.
+
+\textbf{Proposed (Vision-Guided Active Dodging):} The proposed dynamic grid-search engine utilizing YOLOv8 layout detection bounding boxes dilated by safety margins ($\delta_p=15$ pt) as spatial obstacles.
+
+The primary performance metric is the Zero-Collision Rate (ZCR). The paired binary outcomes (collision vs. collision-free) between the baseline and the proposed engine are evaluated using a two-sided exact McNemar test at a significance level of $\alpha=0.05$. In addition, the Needs-Review Rate ($\mathrm{Rate}_{\mathrm{review}}$) and Silent-Failure Rate (SFR) are reported for the proposed system to quantify fallback frequency and undetected overlaps. Pagination marks follow an identical placement optimization routine and are not evaluated separately.
+
+The placement engine searches the lower-right region of the page (Section~\ref{sec:dynamic_stamp_placement}) for a position that minimizes the cost $J$. Placement is audited against human-annotated ground-truth obstacle boxes $B_k^{\mathrm{GT}}$, $k=1..M$, drawn on the final A4 render of each page, not mapped through the Section~\ref{sec:ctm_normalization} affine transform, so that an error in the coordinate transform shows up as collisions instead of cancelling out. The collision test uses the full stamp rectangle of $121.890 \times 51.024$ pt at the returned position, with its width and height exchanged when $\phi = 90^\circ$, and not the $9 \times 4$ cell block:
+\begin{equation}
+\text{Collision}\iff\exists k\in\{1,\ldots,M\}:\ \operatorname{Area}(B_{\text{stamp}}\cap B_k^{\text{GT}})>0
+\end{equation}
+The measures are the zero-collision rate, the needs-review rate, and the silent-failure rate, which is the share of pages that collide but are not flagged:
+
+\textbf{Protocol.} The evaluation corpus comprises 150 held-out document pages spanning the three representation tiers, of which at least half are scanned photocopies and at least 30 exhibit landscape presentation ($\ell=1$). Where test dossiers contain insufficient natural landscape sheets, landscape test instances are constructed by assigning the orthogonal rotation tag to portrait pages, evaluating the coordinate zone mapping of Section~\ref{sec:dynamic_stamp_placement}. Two placement approaches are evaluated on each test page:
+
+\textbf{Baseline (Static Anchor):} A conventional hardcoded placement fixed at the extreme lower-right margin of the working frame, defined at coordinates $(W_f-w_s-20,H_f-h_s-20)$ pt, representing the standard behavior of commercial PDF document utilities.
+
+\textbf{Proposed (Vision-Guided Active Dodging):} The proposed dynamic grid-search engine utilizing YOLOv8 layout detection bounding boxes dilated by safety margins ($p=15$ pt) as spatial obstacles.
+
+The primary performance metric is the Zero-Collision Rate (ZCR). The paired binary outcomes (collision vs. collision-free) between the baseline and the proposed engine are evaluated using a two-sided exact McNemar test at a significance level of $=0.05$. In addition, the Needs-Review Rate ($\mathrm{Rate}_{\mathrm{review}}$) and Silent-Failure Rate (SFR) are reported for the proposed system to quantify fallback frequency and undetected overlaps. Pagination marks follow an identical placement optimization routine and are not evaluated separately.
 
 \subsection{Geometric Normalization and Coordinate Alignment}
 \label{sec:eval_geom_normalization}
 
-Every output page has the A4 size by construction.
-A page counts as upright and fit if its output size is within $\epsilon = 0.01\text{ pt}$ of $595.276 \times 841.890\text{ pt}$, a marker glyph placed at a known corner appears at the expected corner, and the rendered content maintains its aspect ratio within $0.1\%$:
+Every output page has the A4 size by construction, so sheet size alone is not a meaningful test. A page counts as upright and fit if all three hold: its output size is within $\epsilon=0.01$ pt of $595.276\times841.890$ pt; a marker glyph placed at a known corner of the source page appears at the expected corner of the rendered output; and the rendered content lies inside the sheet with the source aspect ratio within 0.1\%.
 \begin{equation}
 \label{eq:rate_fit}
 \text{Rate}_{\text{fit}} = \frac{N_{\text{upright and fit}}}{N_{\text{total}}}
 \end{equation}
-Coordinate conversion accuracy across the four spaces of Section 3.5.2 is measured by the registration error:
+Coordinate conversion accuracy through the four spaces of Section~\ref{sec:coordinate_conversion} is measured by the registration error between a projected point and its known position:
 \begin{equation}
 \label{eq:registration_error}
 \Delta E = \sqrt{(x_{\text{projected}} - x_{\text{actual}})^2 + (y_{\text{projected}} - y_{\text{actual}})^2}
 \end{equation}
-The pass criterion is $\Delta E \le 1.5\text{ pt}$, approximately one detector pixel at A4 scale.
+\textbf{Protocol.} Ground truth comes from 50 synthetic pages generated with known mark positions in US Letter, Legal, A3 and A4 sizes, with and without sideways flags ($\rho\in\{0^\circ,90^\circ,180^\circ,270^\circ\}$), and with portrait and landscape content. Four corner marks per page are projected from the detector tensor through the inverse letterbox, preview-to-point and A4 operators and compared with their known positions on the rendered A4 page.
+
+The pass criterion is $\Delta E \le 1.5$ pt, about one detector pixel at the A4 scale (1.31 pt for a $1240 \times 1754$ preview). The rate is reported with a Wilson interval, with the mean and maximum $\Delta E$. Section~\ref{sec:ctm_normalization} reads orientation from page metadata only, so scans that are physically upside down but tagged $\rho=0^\circ$ are outside this test and are listed as a known limitation.
 
 \subsection{Dual-Track Cryptographic Evidentiary Preservation}
 \label{sec:eval_crypto_preservation}
 
-Under RA 8792 and A.M. No. 01-7-01-SC, a digital signature preserves legal non-repudiation only if signed byte streams are unaltered.
-Track 2 returns source bytes exactly, verified by SHA-256 digest equality:
+Under the Electronic Commerce Act of 2000 (RA 8792) and A.M. No. 01-7-01-SC, a digital signature keeps its presumption of authenticity only if the signed bytes are unaltered. Track 2 must therefore return the source bytes exactly. Preservation is checked by digest equality:
 \begin{equation}
 \label{eq:preservation_digest}
-\text{Preserved}(f) = \mathbf{1}\left[ \text{SHA256}(f_{\text{out}}) = \text{SHA256}(f_{\text{in}}) \right]
+H(M_{\text{source}})=H(M_{\text{extracted}})
 \end{equation}
-Embedded PKCS\#7 signature validity is evaluated using Adobe Acrobat and OpenSSL cryptographic CLI validators to guarantee zero signature invalidation.
+where $H$ is SHA-256. Signature validity is defined as the integrity of the PKCS\#7 digest over the byte ranges in the \texttt{/ByteRange} dictionary. Certificate trust and revocation checks are outside the scope of this study (Section~\ref{sec:scope_and_delimitations}).
+
+\textbf{Protocol.} Twenty digitally signed instruments are used, signed with PNPKI and commercial X.509 certificates. Where PNPKI certificates cannot be obtained for the study, certificates from a test certificate authority are used instead, and this is stated with the results. The digest of each file is computed before ingestion. Each file is processed through both tracks; the files extracted from the Track 2 container are re-hashed and their ByteRange digests are verified.
+
+Three further checks are made. First, the pipeline is run on a malformed signed file that triggers the Ghostscript repair of Component 1, to confirm that Track 2 stores and hashes the original file, not the repaired one. Second, as a negative control, the Track 1 output of a signed file is expected to fail ByteRange validation, since the page content has been rewritten. Third, as a second negative control, flipping one byte in a Track 2 file must change its digest and invalidate the signature. The pass target is a 100\% digest match and valid ByteRange digest for all Track 2 files, together with the expected failure of both negative controls.
 
 \subsection{Edge Runtime Latency and Resource Utilization}
 \label{sec:eval_latency_resource}
 
-Latency is profiled on commodity multi-core CPU hardware without GPU acceleration.
-Throughput in pages per minute (PPM) across a dossier $d$ of $N_d$ pages is:
+Latency is profiled on the target commodity multi-core CPU without dedicated GPU acceleration. Let $T_k(i)$ denote the execution time (in seconds) of per-page stage $k$ on page $i$ across the evaluation corpus of $N$ total pages, and let $T_{\mathrm{wall}}(d)$ denote the total wall-clock time (in seconds) required to process dossier $d$ of $N_d$ pages end to end.
+
+To directly verify the latency requirement of Objective H, the combined per-page perception time under concurrent quantized YOLOv8 ONNX ($k=2$) and targeted RapidOCR ($k=3$) execution on page $i$ is defined as:
+\begin{equation}
+\label{eq:perception_latency}
+T_{\mathrm{perc}}(i)=T_2(i)+T_3(i)
+\end{equation}
+The mean per-page perception processing time ($\overline T_{\mathrm{perc}}$) and the total mean per-page pipeline processing time ($\overline T_{\mathrm{page}}$) across all $N$ evaluated pages, both expressed in seconds, are computed as:
+\begin{equation}
+\overline T_{\mathrm{perc}}=\frac{1}{N}\sum_{i=1}^N T_{\mathrm{perc}}(i),\quad
+\overline T_{\mathrm{page}}=\frac{1}{N}\sum_{i=1}^N\sum_{k=1}^{4}T_k(i).
+\end{equation}
+End-to-end dossier throughput in pages per minute (PPM) for dossier $d$ is given by:
 \begin{equation}
 \label{eq:throughput_ppm}
-\text{PPM} = \frac{60 \cdot N_d}{T_{\text{wall}}(d)}
+\text{PPM}_d = \frac{60 \cdot N_d}{T_{\text{wall}}(d)}
 \end{equation}
-Memory consumption is measured via peak resident set size (RSS), asserting a maximum threshold of $4\text{ GB}$ to ensure edge stability.
+with $T_{\mathrm{wall}}(d)$ measured in seconds (or equivalently $60{,}000\cdot N_d/T_{\mathrm{wall}}(d)$ when logged in milliseconds). Hardware resource utilization is quantified by the peak resident set size (Peak RSS, in MB) and the mean CPU utilization percentage across all active processor threads.
+
+\textbf{Protocol.} The benchmark is executed across the 10 workflow dossiers comprising 50 to 150 pages each (approximately $N=1{,}000$ pages in total), spanning native digital PDFs, clean scans (200--300 DPI), and degraded photocopies. All timings are captured on the target edge hardware environment (4 vCPU, 8 GB RAM running Ubuntu Linux) using high-resolution monotonic performance counters (\texttt{time.perf\_counter\_ns()}). Prior to data recording, a warm-up pass of 10 pages is executed and discarded to eliminate cold-start graph initialization, memory allocation, and cache-warming overhead.
+
+Per-page stages are instrumented and timed individually per page: (1) Ghostscript Flate repair and PyMuPDF WebP preview rendering, (2) quantized YOLOv8s ONNX layout inference on CPU execution providers, (3) targeted in-memory RapidOCR extraction (DBNet++ detection and SVTR recognition) across isolated text crops in shared C-buffers, and (4) constrained 2D grid-search stamp coordinate calculation. In addition to individual stage timings, the concurrent perception latency $T_{\mathrm{perc}}(i)$ (Stages 2 and 3 combined) is logged per page in seconds and compared against the combined perception latency budget of 0.060s (60ms, comprising $<0.035$s for YOLOv8s and $<0.025$s for RapidOCR as stated in Sections 3.1.11 and 3.1.12). Per-dossier operations are timed per dossier and reported separately from the per-page table: (5) statutory pre-flight audit and Hungarian checklist matching, and (6) Dual-Track PyMuPDF compilation, CTM normalization, and stamp serialization, which is also normalized per page and compared against the sub-millisecond compilation figure stated in Section 2.2.5.
+
+For each per-page stage and for the combined perception execution $T_{\mathrm{perc}}$, the sample mean ($\bar T$), standard deviation ($s$), median (P50), and 95th percentile (P95) are reported in seconds (and milliseconds for stage-level granularity), accompanied by a 95\% confidence interval for the mean derived via file-level cluster bootstrap (1,000 resamples). Results are further stratified across the three document quality tiers to evaluate whether dense text layouts or scan noise increase OCR crop counts and execution times. To verify operational stability on resource-constrained office hardware, the full 1,000-page benchmark is repeated under strict process memory caps of 16 GB and 8 GB, recording Peak RSS, CPU saturation, and the incidence of any out-of-memory (OOM) faults.
 
 \subsection{End-to-End Preparation Turnaround and Clerical Defect Reduction}
 \label{sec:eval_turnaround}
 
-Turnaround acceleration is evaluated across 10 workflow dossiers arranged into 5 matched pairs.
-The paired time difference and relative turnaround reduction are:
+The 10 workflow dossiers are arranged into 5 matched pairs with similar page counts and similar numbers of seeded faults. For pair $i$ and preparer $p$, one dossier of the pair is prepared manually and the other with the system, in an order counterbalanced across preparers. The paired time difference and the relative reduction over all pairs are:
 \begin{equation}
 \label{eq:turnaround_reduction}
-\Delta T_i = T_{\text{manual}}^{(i)} - T_{\text{system}}^{(i)}, \quad \bar{R} = \frac{\sum_i \Delta T_i}{\sum_i T_{\text{manual}}^{(i)}}
+\Delta_{ip}=T_{\mathrm{manual},ip}-T_{\mathrm{system},ip},\quad
+\operatorname{Reduction}=\frac{\sum_{i,p}\Delta_{ip}}{\sum_{i,p}T_{\mathrm{manual},ip}}\times100\%.
 \end{equation}
-Statistical significance is verified via paired $t$-tests, Wilcoxon signed-rank tests, and Cohen's $d_z$ effect size estimation.
+$T_{\mathrm{system}}$ includes the operator's review and correction of flagged items, not only machine time. Because the two dossiers of a pair are not identical, time per 100 pages is also reported. Clerical defects (a missed unnotarized jurat, a stamp over text, a misplaced attachment) are counted by an auditor who does not know which method produced each package.
+
+\textbf{Protocol.} Three preparers each prepare all 10 files: 5 manually with commercial software and 5 with the proposed workspace. The two methods alternate within each pair, and the order of pairs is shuffled per preparer, which controls for learning. This gives 15 paired observations $\Delta_{ip}$.
+
+Since the observations of one preparer are not independent, the primary analysis is a linear mixed-effects model of $\Delta_{ip}$ with a fixed intercept, a random intercept for the preparer, and the pair as a fixed effect; the intercept estimates the mean time saved. A two-tailed paired $t$-test and a Wilcoxon signed-rank test on the 15 differences are reported as sensitivity checks, both because a normality test has little power at this sample size and because they treat the 15 values as independent. The paired effect size $d_z=\operatorname{mean}(\Delta)/s_\Delta$ and a 95\% confidence interval for the mean difference are reported, and the results are also shown per preparer.
 
 \subsection{Local Interactive Workspace Usability Evaluation}
 \label{sec:eval_usability}
 
-User experience and operational workflow viability are measured using the System Usability Scale (SUS) across 10 bidding procurement officers.
-The composite SUS score is computed as:
+Usability is measured with the System Usability Scale (SUS) questionnaire (Brooke, 1996), which covers the satisfaction dimension of usability in the sense of ISO 9241-11. For responses $x_1,\ldots,x_{10}\in\{1,\ldots,5\}$,
 \begin{equation}
 \label{eq:sus_score}
 \text{SUS} = 2.5 \left[ \sum_{i \in \text{odd}} (x_i - 1) + \sum_{i \in \text{even}} (5 - x_i) \right]
 \end{equation}
-where $x_i \in \{1, 2, 3, 4, 5\}$ denotes the Likert response to item $i$.
-The evaluation benchmarks the framework against the industry standard threshold ($\text{SUS} \ge 68$).
+which ranges from 0 to 100. A score of 68 is the commonly used industry average.
+
+\textbf{Protocol.} 5 representative operators (procurement officers, contractor proposal staff, and administrative clerks) each complete four tasks: (1) staging and ingesting a multi-file bid portfolio, (2) reviewing an audit alert for a missing notary seal, (3) manually adjusting an automated stamp placement, and (4) exporting the Track 1 and Track 2 packages. They then answer the 10-item SUS questionnaire. Task completion and time are recorded. The mean SUS is tested against 68 with a one-sided one-sample $t$-test ($H_1$: SUS $>68$), with a Wilcoxon signed-rank test as a check and a 95\% confidence interval for the mean.

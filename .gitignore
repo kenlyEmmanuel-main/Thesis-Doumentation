@@ -15,10 +15,13 @@
 *.nav
 *.snm
 *.vrb
+build/
 
 # OS and Editor generated files
 .vscode/*
 !.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/extensions.json
 Thumbs.db
 .DS_Store
 temp_eq_images/

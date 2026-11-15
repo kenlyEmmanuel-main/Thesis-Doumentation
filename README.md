@@ -33,6 +33,8 @@ You need a local $\TeX$ distribution that provides `pdflatex` and `bibtex`.
   ```bash
   sudo apt update && sudo apt install texlive-full
   ```
+The build tasks also require Python 3.8 or later; verify with `python --version`.
+
 
 ### Step 3: Install the Editor / IDE
 - Download and install **Antigravity IDE** (or [Visual Studio Code](https://code.visualstudio.com/)).
@@ -57,11 +59,22 @@ cd "Thesis-Doumentation"
 ### 2. Open in Antigravity IDE / VS Code
 Open the project root folder in your editor (`File` $\rightarrow$ `Open Folder...`).
 
-### 3. Automated Compilation Recipe (`.vscode/settings.json`)
-This repository comes preconfigured with `.vscode/settings.json`. It runs native Windows/cross-platform binaries without needing Perl or `latexmk`:
-- **Recipe:** `pdflatex` $\rightarrow$ `bibtex` $\rightarrow$ `pdflatex` $\rightarrow$ `pdflatex`.
-- **Auto-compile:** Triggers automatically whenever you save any `.tex` file (`Ctrl + S`).
-- **Viewer:** Configured to open the compiled PDF directly inside an editor tab.
+### 3. Build Tasks
+Auto-build is disabled so multiple compilations cannot overwrite one another.
+Use **Terminal → Run Task** and select `Thesis: Build full`, `Thesis: Build chapter 1`,
+`Thesis: Build chapter 2`, `Thesis: Build chapter 3`, or `Thesis: Build references`.
+The full task is also available with `Ctrl+Shift+B`.
+Builds use `pdflatex → bibtex → pdflatex → pdflatex`; PDFs can be opened in the editor.
+Chapter previews refresh full-document reference data first, so their chapter,
+equation, and citation numbers match the current full manuscript.
+Links to content outside a chapter may not work in that chapter's standalone PDF.
+Preview PDFs are written to `build/previews/chapter1.pdf`, `chapter2.pdf`,
+`chapter3.pdf`, and `references.pdf`; the full build writes `main.pdf`.
+You can also run `python scripts/build.py chapter1` (or `full`, `chapter2`,
+`chapter3`, `references`) in a terminal at the project root. Temporary build
+files are kept outside the project and removed automatically.
+If Windows reports that a PDF cannot be replaced, close that PDF in all viewers
+and rerun the task.
 
 ---
 
@@ -71,12 +84,16 @@ All content is split into dedicated files so multiple team members can write con
 
 ```text
 Thesis Paper/
-├── main.tex                # Root master document (Preamble, ADNU margins, styles, includes)
-├── main.pdf                # Compiled 17-page output document
-├── references.bib          # APA BibTeX database for citations
+├── main.tex                # Master document and chapter selection
+├── preamble.tex            # Shared packages and formatting
+├── scripts/build.py        # Full and standalone preview builds
+├── main.pdf                # Compiled proposal output (generated locally)
+├── references.bib          # IEEE BibTeX database for citations
 ├── .gitignore              # Ignores build artifacts (*.aux, *.bbl, etc.)
 ├── .vscode/
-│   └── settings.json       # Native build recipes & IDE editor settings
+│   ├── settings.json       # LaTeX Workshop settings
+│   ├── tasks.json          # Full and preview build tasks
+│   └── extensions.json     # Recommended extension
 ├── frontmatter/
 │   ├── titlepage.tex       # Official ADNU ECE/CpE title page layout
 │   └── abstract.tex        # Single-spaced abstract (100-200 words) + 5 keywords
@@ -96,13 +113,13 @@ Thesis Paper/
 ## 4. Daily Editing & Collaboration Workflow
 
 ### A. Compiling & Viewing the PDF
-1. Open any `.tex` file (or `main.tex`).
-2. Make your edits and press `Ctrl + S`. The compilation pipeline runs in the background.
-3. To view the PDF:
-   - Click the **View LaTeX PDF** icon in the upper-right corner of the editor, or press `Ctrl + Alt + V` and choose **"View in Antigravity/VS Code Tab"**.
-4. **SyncTeX Navigation (Jump between source & PDF):**
-   - In `.tex`: `Ctrl + Left Click` on any line to jump directly to that position in the PDF viewer.
-   - In PDF: `Ctrl + Left Click` on any text in the viewer to jump back to the exact `.tex` line.
+1. Open the project folder in VS Code and edit the appropriate `chapters/*.tex` file.
+2. Save your changes with `Ctrl+S`.
+3. Choose **Terminal → Run Task** and select the full thesis, chapter, or references task.
+4. Open the resulting PDF in VS Code to inspect it. Use the full PDF for final review:
+   standalone previews do not contain the other chapters.
+5. Ask your AI assistant to explain unfamiliar LaTeX, then review its changes and
+   citations against your source. Do not accept substantive changes without review.
 
 ### B. The "One-Sentence-Per-Line" Rule (Critical for Git)
 To prevent Git merge conflicts across team members:
@@ -110,16 +127,14 @@ To prevent Git merge conflicts across team members:
 - $\LaTeX$ automatically treats single line breaks as normal spaces in paragraphs, so document output is completely unchanged.
 - **Why?** Git compares files line-by-line. If an entire paragraph is on one single line and two people edit different sentences, Git flags a collision. With one sentence per line, Git merges edits cleanly.
 
-### C. In-Text Citations (APA Style)
-We use `natbib` configured for APA author-date format:
-- For narrative citations (e.g., *Vaswani et al. (2017) stated...*):
-  ```latex
-  \citet{vaswani2017attention} demonstrated that self-attention mechanisms...
-  ```
-- For parenthetical citations (e.g., *...as confirmed in previous studies (Goodfellow et al., 2016)*):
-  ```latex
-  \citep{goodfellow2016deep}
-  ```
+### C. In-Text Citations (IEEE Style)
+The proposal uses `cite` and the `IEEEtran` bibliography style.
+Use `\cite{key}` and add the corresponding source to `references.bib`:
+```latex
+Document layout analysis can use object detection \cite{ref29}.
+```
+Reference numbers are assigned by BibTeX in order of first citation.
+The departmental writing guidelines show APA examples; confirm the required style with the adviser before changing the manuscript's citation style.
 - To add a reference: Open `references.bib` and add your BibTeX entry.
 
 ### D. Adding Tables & Figures (ADNU ECE/CpE Standards)
@@ -150,6 +165,18 @@ We use `natbib` configured for APA author-date format:
   \end{figure}
   \noindent\small Source: Author, Year
   ```
+
+### E. Equations and Cross-References
+Use an equation environment for a numbered display and refer to its label rather
+than typing a number. LaTeX updates the number when equations move.
+```latex
+\begin{equation}
+\label{eq:example}
+E = mc^2
+\end{equation}
+See Equation~\eqref{eq:example}.
+```
+Keep labels unique and use the existing source's notation and citation keys.
 
 ---
 
