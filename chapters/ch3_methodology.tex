@@ -643,53 +643,53 @@ On a blank page every candidate has $d = \max(N_r, N_c)$, so the tie-break place
 \subsection{Asset-to-Checklist Matching and Sequence Inversion Verification}
 \label{sec:checklist_matching}
 
-The compliance engine checks that uploaded bidder documents cover every mandatory entry in the Bids and Awards Committee (BAC) checklist under Republic Act No. 12009 and follow the prescribed order. It runs four coupled operations: (1) OCR-tolerant text similarity for titles and keywords. (2) Region-gated, exact-match extraction of dates and contract counts. (3) Maximum-weight one-to-one slot assignment. (4) Sequence disorder measurement.
+The compliance engine checks that uploaded bidder documents cover every mandatory entry in the Bids and Awards Committee (BAC) checklist under Republic Act No.~12009 and follow the prescribed order. It runs four coupled operations: (1) OCR-tolerant text similarity for titles and keywords, (2) region-gated, exact-match extraction of dates and contract counts, (3) maximum-weight one-to-one slot assignment, and (4) sequence disorder measurement.
 
 The first operation tolerates OCR noise, because titles and keywords can be matched approximately. The second does not, because a date that is off by one digit is a different date.
 
 \textbf{Checklist model.} Let $U = \{u_1,\ldots,u_m\}$ be the uploaded document units. Each unit is a standalone file or an isolated page range inside a bundled file. Let $C = \{c_1,\ldots,c_k\}$ be the ordered checklist extracted from the applicable bidding documents. Each requirement is a five-tuple:
 \begin{equation}
 \label{eq:checklist_tuple}
-c_j=(\operatorname{Title}_j,\mathcal K_j,\mathcal Y_j,M_j,n_j).
+c_j = (\mathrm{Title}_j, \mathcal{K}_j, \mathcal{Y}_j, M_j, n_j).
 \end{equation}
 \begin{itemize}
-\item $\operatorname{Title}_j$: the official requirement heading.
-\item $\mathcal K_j$: the set of required keywords.
-\item $\mathcal Y_j$: the set of required layout classes, e.g. \{Signature\_Block, Official\_Seal\} for a sworn affidavit.
-\item $M_j\in\{0,1\}$: 1 marks a mandatory entry.
-\item $n_j\geq1$: the expected document count.
+    \item $\mathrm{Title}_j$: the official requirement heading.
+    \item $\mathcal{K}_j$: the set of required keywords.
+    \item $\mathcal{Y}_j$: the set of required layout classes, e.g., $\{\texttt{Signature\_Block}, \texttt{Official\_Seal}\}$ for a sworn affidavit.
+    \item $M_j \in \{0, 1\}$: $1$ marks a mandatory entry.
+    \item $n_j \ge 0$: the expected attachment count ($n_j = 0$ when the bidder declares no ongoing contracts).
 \end{itemize}
-Most entries have $n_j=1$. The ongoing-contracts entry sets $n_j$ to the number of contracts listed in the bidder's Statement of All Ongoing Contracts, read at run time by RapidOCR (see Contract Count below). Each requirement expands into $n_j$ slots $(j,r)$, $1\leq r\leq n_j$, giving $k'=\sum n_j$ slots with ordinal positions:
+
+Most entries have $n_j = 1$. The ongoing-contracts entry sets $n_j$ to the number of contracts listed in the bidder's \emph{Statement of All Ongoing Contracts}, read at run time by RapidOCR (see \emph{Contract Count for Ongoing Contracts} below). Each requirement expands into $n_j$ slots $(j, r)$, $1 \le r \le n_j$, giving $k' = \sum n_j$ slots with ordinal positions:
 \begin{equation}
-\label{eq:slot_position}
-q(j,r)=\sum_{j'<j}n_{j'}+r.
+\label{eq:slot_ordinal}
+q(j, r) = \sum_{j' < j} n_{j'} + r.
 \end{equation}
 
-\textbf{OCR-Aware Weighted Edit Distance.} RapidOCR makes predictable character substitutions (e.g. ``0'' read as ``O'', ``1'' as ``I'' or ``l'', ``5'' as ``S'') and may split or merge tokens. Unweighted Levenshtein distance charges each of these a full cost of 1.0, so a short token such as ``BIR'' read as ``B1R'' can fall below the acceptance threshold. Following the reduced-cost idea of Ha (2019), the edit cost between characters $a$ and $b$ is:
+\textbf{OCR-Aware Weighted Edit Distance.} RapidOCR makes predictable character substitutions (e.g., ``0'' read as ``O'', ``1'' as ``I'' or ``l'', ``5'' as ``S'') and may split or merge tokens. Unweighted Levenshtein distance charges each of these a full cost of $1.0$, so a short token such as ``BIR'' read as ``B1R'' can fall below the acceptance threshold. Following the reduced-cost idea of Ha (2019), the edit cost between characters $a$ and $b$ is:
 \begin{equation}
-\label{eq:ocr_edit_cost}
-\delta(a,b)=
-\begin{cases}
-0, & a=b,\\
-0.1, & (a,b)\in\Omega_{\mathrm{OCR}},\ \text{or }a=\epsilon,\ b\in\Sigma_{\mathrm{sep}},\\
-0.1, & b=\epsilon,\ a\in\Sigma_{\mathrm{sep}},\\
-1.0, & \text{otherwise}.
+\label{eq:weighted_edit_cost}
+\delta(a, b) = \begin{cases}
+0, & a = b, \\
+0.1, & (a, b) \in \Omega_{\mathrm{OCR}}, \text{ or } a = \epsilon,\, b \in \Sigma_{\mathrm{sep}}, \\
+0.1, & b = \epsilon,\, a \in \Sigma_{\mathrm{sep}}, \\
+1.0, & \text{otherwise.}
 \end{cases}
 \end{equation}
 $\Omega_{\mathrm{OCR}}$ is a symmetric set of common confusion pairs, and $\Sigma_{\mathrm{sep}}$ is the set of whitespace and punctuation characters. The weighted distance $d_w$ is the minimum total cost of edits that turn one string into the other. The normalized similarity is:
 \begin{equation}
 \label{eq:weighted_similarity}
-\operatorname{Sim}_w(x,y)=1-\frac{d_w(x,y)}{\max(|x|,|y|)}.
+\mathrm{Sim}_w(x, y) = 1 - \frac{d_w(x, y)}{\max(|x|, |y|)}.
 \end{equation}
-Example: ``2O26'' against ``2026'' gives $1-0.1/4=0.975$ instead of $0.75$.
+Example: ``2O26'' against ``2026'' gives $1 - 0.1/4 = 0.975$ instead of $0.75$.
 
-Ha's confusion list, which this study starts from, is O/0, l/1, s/5, z/2 and m/n. Any pair added beyond Ha's list (such as 8/B) enters $\Omega_{\mathrm{OCR}}$ only if it appears in the OCR errors observed on the validation split. $\operatorname{Sim}_w$ is used only for titles and keywords. It is never applied to dates or counts.
+Ha's confusion list, which this study starts from, is $O/0$, $l/1$, $s/5$, $z/2$, and $m/n$. Any pair added beyond Ha's list (such as $8/B$) enters $\Omega_{\mathrm{OCR}}$ only if it appears in the OCR errors observed on the validation split. $\mathrm{Sim}_w$ is used only for titles and keywords. It is never applied to dates or counts.
 
 \textbf{Exact-Match Extraction of Dates.} Türkmen et al. (2025) found that image preprocessing usually lowered OCR accuracy on official documents, and that taking the latest date on a page fails when several dates are equally prominent \cite{docxb2}. This study therefore adopts four rules.
 
-\textbf{Rule 1: No preprocessing.} Cropped text regions go to RapidOCR as detected, without binarization, thresholding or morphological filtering.
+\textbf{Rule 1: No preprocessing.} Cropped text regions go to RapidOCR as detected, without binarization, thresholding, or morphological filtering.
 
-\textbf{Rule 2: Region and anchor gating.} A date is searched only inside the Text\_Paragraph regions of the unit, and only in the text window following an anchor phrase.
+\textbf{Rule 2: Region and anchor gating.} A date is searched only inside the \texttt{Text\_Paragraph} regions of the unit, and only in the text window following an anchor phrase.
 
 \begin{table}[H]
 \centering
@@ -706,7 +706,8 @@ Notary commission expiry & $\Lambda_{\mathrm{com}}$ & ``commission expires'', ``
 \bottomrule
 \end{tabular}
 \end{table}
-Anchor phrases are text, so they are matched with $\operatorname{Sim}_w$ at threshold $\theta_k$. A date that follows a $\Lambda_{\mathrm{com}}$ anchor is labeled a commission date and is never used as an execution or jurat date. This avoids the ``latest date wins'' failure, because a commission expiry is later than the execution date on every sworn affidavit.
+
+Anchor phrases are text, so they are matched with $\mathrm{Sim}_w$ at threshold $\theta_k$. A date that follows a $\Lambda_{\mathrm{com}}$ anchor is labeled a commission date and is never used as an execution or jurat date. This avoids the ``latest date wins'' failure, because a commission expiry is later than the execution date on every sworn affidavit.
 
 \textbf{Rule 3: Date grammar.} Candidate spans must match one of the formats in $G_{\mathrm{date}}$, which extends the pattern set of Türkmen et al. with Philippine affidavit wording.
 
@@ -718,94 +719,102 @@ Anchor phrases are text, so they are matched with $\operatorname{Sim}_w$ at thre
 \toprule
 \textbf{Format} & \textbf{Example} \\
 \midrule
-Numeric, separators / - . or space, optional leading zeros & 5/3/2026, 05-03-2026, 5.3.2026 \\
-ISO & 2026-03-05 \\
-Written month, either order & March 5, 2026, 5 Mar.\ 2026 \\
-Affidavit wording, ordinal in words or digits & this fifth day of March 2026, this 5th day of March, 2026 \\
+Numeric, separators \texttt{/}, \texttt{-}, \texttt{.}, or space, optional leading zeros & \texttt{5/3/2026}, \texttt{05-03-2026}, \texttt{5.3.2026} \\
+ISO & \texttt{2026-03-05} \\
+Written month, either order & \texttt{March 5, 2026}, \texttt{5 Mar.\ 2026} \\
+Affidavit wording, ordinal in words or digits & \texttt{this fifth day of March 2026}, \texttt{this 5th day of March, 2026} \\
 \bottomrule
 \end{tabular}
 \end{table}
-Ordinal words (first to thirty-first) map to day numbers 1 to 31. Month names match exactly (case-insensitive) against full names and standard abbreviations.
 
-\textbf{Rule 4: Context-gated character repair.} OCR homoglyphs are repaired only inside numeric slots of the date grammar. The numeric slots accept the character class \texttt{[0-9 O o I l S Z B]}, and the repair map applies only there:
+Ordinal words (\emph{first} to \emph{thirty-first}) map to day numbers $1$ to $31$. Month names match exactly (case-insensitive) against full names and standard abbreviations.
+
+\textbf{Rule 4: Context-gated character repair.} OCR homoglyphs are repaired only inside numeric slots of the date grammar. The numeric slots accept the character class \texttt{[0-9OoIlSZB]}, and the repair map applies only there:
 \begin{equation}
-\label{eq:numeric_repair}
-\phi_{\mathrm{num}}:\ \{O,o\}\mapsto0,\quad\{I,l\}\mapsto1,\quad S\mapsto5,\quad Z\mapsto2,\quad B\mapsto8
+\label{eq:gated_repair}
+\phi_{\mathrm{num}} : \{O, o\} \mapsto 0, \quad \{I, l\} \mapsto 1, \quad S \mapsto 5, \quad Z \mapsto 2, \quad B \mapsto 8.
 \end{equation}
 It is never applied to month names or other words. Without this gate, ``SEPTEMBER'' would be corrupted into ``5EPTEMBER''. The repair is a fixed character mapping, not fuzzy matching, so the result must still pass strict validation. A date repaired by $\phi_{\mathrm{num}}$ is recorded as \texttt{ocr\_corrected = true} in the audit ledger.
 
-
-
-\textbf{Date Validation and Decision.} A parsed date is accepted only if it is a real calendar date: month 1 to 12, a valid day for that month (including leap years), and a year inside a plausible window. Numeric dates such as 05/03/2026 can be read day-first or month-first. If both readings are valid and give different dates, the date is marked ambiguous and sent for operator review instead of being guessed.
+\textbf{Date Validation and Decision.} A parsed date is accepted only if it is a real calendar date: month $1$ to $12$, a valid day for that month (including leap years), and a year inside a plausible window. Numeric dates such as \texttt{05/03/2026} can be read day-first or month-first. If both readings are valid and give different dates, the date is marked ambiguous and sent for operator review instead of being guessed.
 
 For a unit, the extracted date for a role is defined only when exactly one valid, unambiguous date is found in the window after the anchor:
 \begin{equation}
-\label{eq:date_role}
-d_{\mathrm{role}}(u_i)=
-\begin{cases}
-d, & |\mathcal D_{\mathrm{role}}(u_i)|=1\ \text{and the date is unambiguous},\\
-\text{undefined}, & \text{otherwise}.
+\label{eq:extracted_date}
+d_{\mathrm{role}}(u_i) = \begin{cases}
+d, & |\mathcal{D}_{\mathrm{role}}(u_i)| = 1 \text{ and the date is unambiguous,} \\
+\text{undefined}, & \text{otherwise.}
 \end{cases}
 \end{equation}
-Here $\mathcal D_{\mathrm{role}}(u_i)$ is the set of valid dates found after anchors of that role. With $d_{\mathrm{open}}$ as the tender opening date, the audit outcome is:
+Here $\mathcal{D}_{\mathrm{role}}(u_i)$ is the set of valid dates found after anchors of that role. With $d_{\mathrm{open}}$ as the tender opening date, the audit outcome is:
 \begin{equation}
-\label{eq:date_status}
-\operatorname{Status}(u_i)=
-\begin{cases}
-\text{Fail}, & \begin{aligned}[t]
-&d_{\mathrm{jur}}>d_{\mathrm{open}}\ \text{(post-dated jurat) or}\\
-&v<d_{\mathrm{open}}\ \text{(expired credential, validity date }v\text{)},
-\end{aligned}\\
-\text{Warning}, & d_{\mathrm{role}}\text{ undefined, ambiguous, or OCR confidence}<\theta_c,\\
-\text{Pass}, & \text{otherwise}.
+\label{eq:audit_outcome}
+\mathrm{Status}(u_i) = \begin{cases}
+\mathrm{Fail}, & d_{\mathrm{jur}} > d_{\mathrm{open}} \text{ (post-dated jurat) or } v < d_{\mathrm{open}} \text{ (expired credential, validity date } v\text{)}, \\
+\mathrm{Warning}, & d_{\mathrm{role}} \text{ undefined, ambiguous, or OCR confidence } < \theta_c, \\
+\mathrm{Pass}, & \text{otherwise.}
 \end{cases}
 \end{equation}
 A date that cannot be read or validated is flagged. It is never passed silently. $\theta_c$ is an OCR confidence threshold tuned on the validation split. Date accuracy is reported by exact match and by character error rate (Section~\ref{sec:eval_statutory_audit}).
 
-\textbf{Contract Count for Ongoing Contracts.} The count $n_j$ is read from the Table\_Grid region of the Statement of All Ongoing Contracts. Numeric tokens in that region pass through the same gated repair $\phi_{\mathrm{num}}$ before the row-counting rule is applied. The count is compared with the true count in Test 4 (Section~\ref{sec:eval_checklist_matching}).
+\textbf{Contract Count for Ongoing Contracts.} For the mandatory checklist entry covering ongoing contracts, the expected attachment count $n_j$ will be read from the \texttt{Table\_Grid} region(s) detected on the bidder's \emph{Statement of All Ongoing Government and Private Contracts}. Geometric row-grouping thresholds ($\Delta y_{\mathrm{row}}, \Delta y_{\mathrm{cont}}$) and confidence cutoffs ($\theta_k, \theta_c$) will be fixed on the validation split prior to test evaluation:
+\begin{enumerate}
+    \item \textbf{Column anchoring and row segmentation.} RapidOCR will run on each cropped \texttt{Table\_Grid} region in page order, returning recognized text boxes with page-space coordinates. The table header band will be located by matching canonical GPPB column headers---specifically \emph{``Name of Contract''} (the primary contract-identifying column) and, when present, a leading index column (\emph{``No.''} or \emph{``Item''})---using weighted similarity $\mathrm{Sim}_w \ge \theta_k$ (Eq.~\eqref{eq:weighted_similarity}). Horizontal $x$-intervals will be partitioned into column bands aligned to those header boxes. Data rows below the header band will be segmented using horizontal ruling lines where visible borders are present, or by grouping text boxes separated by less than the vertical line-gap threshold $\Delta y_{\mathrm{row}}$ on borderless or faintly ruled scans.
+    \item \textbf{Contract qualification, exclusions, and continuation rows.} A segmented row band will count as one contract if and only if its \emph{``Name of Contract''} cell contains non-empty, non-placeholder text. Non-contract bands will be handled as follows:
+    \begin{itemize}
+        \item \emph{Header rows:} Bands matching GPPB column headers (such as \emph{``Name of Contract''}, \emph{``Owner's Name''}, \emph{``Nature of Work''}, \emph{``Contractor's Role''}, \emph{``Date Awarded''}, and \emph{``Value of Outstanding''}) at $\mathrm{Sim}_w \ge \theta_k$ will be excluded.
+        \item \emph{Summary and blank rows:} Bands containing total wording (\emph{``Total''}, \emph{``Subtotal''}, \emph{``Grand Total''}) or only blank space, dashes, or filler markers (\emph{``N/A''}, \emph{``Nothing follows''}) will be excluded. If the table declares \emph{``None''} or \emph{``No ongoing contracts''} with zero valid contract rows, the parser will return $n_j = 0$.
+        \item \emph{Wrapped continuation rows:} Any horizontal text band below an active contract row whose \emph{``Name of Contract''} cell is empty while secondary columns (such as address, dates, or values) contain text---or whose vertical offset falls within the intra-cell wrapping threshold $\Delta y_{\mathrm{cont}}$ without a new row index---will be merged into the preceding contract row rather than counted separately.
+    \end{itemize}
+    \item \textbf{Multi-page tables.} When a statement spans consecutive pages within the same document unit, \texttt{Table\_Grid} regions will be processed sequentially in page order. Repeated header bands at the top of subsequent pages will be excluded by header-keyword matching. If the first non-header band on page $p \ge 2$ has an empty \emph{``Name of Contract''} cell (and no new row index) continuing secondary columns from the last row of page $p - 1$, it will be merged into that preceding row rather than incremented.
+    \item \textbf{Index consistency and operator fallback.} Let $\hat{n}_{\mathrm{row}}$ denote the count of qualifying \emph{``Name of Contract''} rows. When a numbered index column is present, its tokens will pass through the gated character repair $\phi_{\mathrm{num}}$ (Eq.~\eqref{eq:gated_repair}) and will be checked for consecutive numbering $1, 2, \dots, \hat{n}_{\mathrm{idx}}$. Consistent with the date-audit policy, an uncertain count will never be accepted silently: $n_j$ will be marked \texttt{unverified} (\texttt{needs\_review = true}) and routed to the operator before checklist slots are created if (a) no \texttt{Table\_Grid} is detected on a non-empty statement, (b) the \emph{``Name of Contract''} header anchor cannot be matched at $\mathrm{Sim}_w \ge \theta_k$, (c) an index column is present and $\hat{n}_{\mathrm{idx}} \ne \hat{n}_{\mathrm{row}}$ or index tokens are non-consecutive or unreadable, or (d) mean OCR confidence across \emph{``Name of Contract''} cells falls below $\theta_c$.
+\end{enumerate}
 
-\textbf{Text--Layout Compatibility Scoring.} Each unit $u_i$ is scored against each requirement $c_j$.
-The score combines recognized text from RapidOCR with layout classes detected by YOLOv8, using a fixed weighted sum.
-It is not a jointly trained multimodal model:
+The count is compared with the true count in Test 4D (Section~\ref{sec:eval_checklist_matching}).
+
+\textbf{Text--Layout Compatibility Scoring.} Each unit $u_i$ is scored against each requirement $c_j$. The score combines recognized text from RapidOCR with layout classes detected by YOLOv8, using a fixed weighted sum. It is not a jointly trained multimodal model:
 \begin{equation}
-\label{eq:match_score_combination}
-S(u_i,c_j)=w_1T_{ij}+w_2K_{ij}+w_3Y_{ij},\quad \sum_{h=1}^{3}w_h=1,\quad w_h\ge0.
+\label{eq:compat_score}
+S(u_i, c_j) = w_1 T_{ij} + w_2 K_{ij} + w_3 Y_{ij}, \quad \sum_{h=1}^{3} w_h = 1, \quad w_h \ge 0.
 \end{equation}
-The initial validation weights are $w_1=0.40$, $w_2=0.35$ and $w_3=0.25$. The three terms are (Eq.~\eqref{eq:title_levenshtein} to \eqref{eq:layout_conformity}):
+The initial validation weights are $w_1 = 0.40$, $w_2 = 0.35$, and $w_3 = 0.25$. The three terms are:
 \begin{align}
-\label{eq:title_levenshtein}
-T_{ij} &= \operatorname{Sim}_w(t_i,\operatorname{Title}_j),\\
-\label{eq:keyword_coverage}
-K_{ij} &= \frac{1}{|\mathcal K_j|}\sum_{w\in\mathcal K_j}\mathbf1\!\left[\max_{v\in V_i}\operatorname{Sim}_w(w,v)\ge\theta_k\right],\\
-\label{eq:layout_conformity}
-Y_{ij} &= \frac{|\mathcal Y_j\cap\mathcal D_i|}{|\mathcal Y_j|}.
+\label{eq:compat_t}
+T_{ij} &= \mathrm{Sim}_w(t_i, \mathrm{Title}_j), \\
+\label{eq:compat_k}
+K_{ij} &= \frac{1}{|\mathcal{K}_j|} \sum_{w \in \mathcal{K}_j} \mathbf1\!\left[\max_{v \in V_i} \mathrm{Sim}_w(w, v) \ge \theta_k\right], \\
+\label{eq:compat_y}
+Y_{ij} &= \frac{|\mathcal{Y}_j \cap \mathcal{D}_i|}{|\mathcal{Y}_j|}.
 \end{align}
-$t_i$ is the OCR header string of the unit ($T_{ij}=0$ if none is detected).
-
-$V_i$ is the set of OCR tokens in the unit, and $\theta_k=0.80$.
-
-$\mathcal D_i$ is the set of layout classes YOLOv8 detected on the unit ($Y_{ij}=1$ if $\mathcal Y_j$ is empty).
-
-\textbf{One-to-One Bipartite Slot Assignment.} Each document fills at most one slot, and each slot accepts at most one document. Scores below $\tau=0.65$ are zeroed first:
-\begin{equation}
-\label{eq:hungarian_assignment}
-\tilde S_{i,(j,r)}=\begin{cases}S(u_i,c_j),&S(u_i,c_j)\ge\tau,\\0,&\text{otherwise},\end{cases}
-\qquad A^*=\operatorname*{argmax}_{A}\sum_{(i,\sigma)\in A}\tilde S_{i,\sigma}.
-\end{equation}
-$A$ ranges over valid one-to-one matchings. Padding the matrix to $\max(m,k')$ lets the Hungarian (Kuhn--Munkres) algorithm solve it in $\mathcal O(\max(m,k')^3)$ time. Pre-thresholding keeps the problem solvable when an attachment is absent. Dropping zero-weight pairs gives three outcomes:
 \begin{itemize}
-\item A mandatory slot ($M_j=1$) with no accepted pair is a Missing Document Defect.
-\item An unassigned unit is an Extraneous Submission.
-\item An accepted pair $(u_a,\text{slot})$ whose score exceeds the best other document's score by less than $\delta=0.08$ is flagged for Operator Review.
+    \item $t_i$ is the OCR header string of the unit ($T_{ij} = 0$ if none is detected).
+    \item $V_i$ is the set of OCR tokens in the unit, and $\theta_k = 0.80$.
+    \item $\mathcal{D}_i$ is the set of layout classes YOLOv8 detected on the unit ($Y_{ij} = 1$ if $\mathcal{Y}_j$ is empty).
 \end{itemize}
 
-\textbf{Sequence Inversion and Relocation Verification.} For multi-slot requirements ($n_j>1$), matched documents are interchangeable and keep their upload order. Let $m_a = |A^*|$ and let $Q = (q_1,\ldots,q_{m_a})$ be the prescribed positions of the accepted documents in upload order. Disorder is measured by:
+\textbf{One-to-One Bipartite Slot Assignment.} Each document fills at most one slot, and each slot accepts at most one document. Scores below $\tau = 0.65$ are zeroed first:
+\begin{align}
+\label{eq:threshold_score}
+\tilde{S}_{i,(j,r)} &= \begin{cases}
+S(u_i, c_j), & S(u_i, c_j) \ge \tau, \\
+0, & \text{otherwise,}
+\end{cases} \\
+\label{eq:hungarian_opt}
+A^* &= \arg\max_{A} \sum_{(i, \sigma) \in A} \tilde{S}_{i, \sigma}.
+\end{align}
+$A$ ranges over valid one-to-one matchings. Padding the matrix to $\max(m, k')$ lets the Hungarian (Kuhn--Munkres) algorithm solve it in $O(\max(m, k')^3)$ time. Pre-thresholding keeps the problem solvable when an attachment is absent. Dropping zero-weight pairs gives three outcomes:
+\begin{itemize}
+    \item A mandatory slot ($M_j = 1$) with no accepted pair is a \textbf{Missing Document Defect}.
+    \item An unassigned unit is an \textbf{Extraneous Submission}.
+    \item An accepted pair $(u_a, \text{slot})$ whose score exceeds the best other document's score by less than $\delta = 0.08$ is flagged for \textbf{Operator Review}.
+\end{itemize}
+
+\textbf{Sequence Inversion and Relocation Verification.} For multi-slot requirements ($n_j > 1$), matched documents are interchangeable and keep their upload order. Let $m_a = |A^*|$ and let $Q = (q_1, \dots, q_{m_a})$ be the prescribed positions of the accepted documents in upload order. Disorder is measured by:
 \begin{equation}
-\label{eq:order_verification_metrics}
-\operatorname{Inv}(Q)=\left|\{(a,b):1\le a<b\le m_a\ \land\ q_a>q_b\}\right|,\qquad
-\operatorname{Moves}(Q)=m_a-\operatorname{LIS}(Q).
+\label{eq:disorder_metrics}
+\mathrm{Inv}(Q) = \left|\{(a, b) : 1 \le a < b \le m_a \wedge q_a > q_b\}\right|, \quad \mathrm{Moves}(Q) = m_a - \mathrm{LIS}(Q).
 \end{equation}
-$\operatorname{Inv}(Q)$ counts inverted pairs. $\operatorname{LIS}(Q)$ is the length of the longest strictly increasing subsequence, found in $\mathcal O(m_a\log m_a)$ time by patience sorting. Documents in the LIS stay in place, so $\operatorname{Moves}(Q)$ is the minimum number of single-document relocations needed to sort the package.
+$\mathrm{Inv}(Q)$ counts inverted pairs. $\mathrm{LIS}(Q)$ is the length of the longest strictly increasing subsequence, found in $O(m_a \log m_a)$ time by patience sorting. Documents in the LIS stay in place, so $\mathrm{Moves}(Q)$ is the minimum number of single-document relocations needed to sort the package.
 
 \section{Document Layout Detector Training Methodology}
 \label{sec:detector_training}
@@ -819,11 +828,12 @@ The training corpus will consist of native digital documents and scanned copies 
 
 Document pages will be annotated with bounding boxes corresponding to the four layout classes used by the proposed detector:
 \begin{itemize}
-    \item \textbf{Signature\_Block:} visible signature marks in designated signing or execution areas.
-    \item \textbf{Official\_Seal:} visible seals and other official marks.
-    \item \textbf{Table\_Grid:} tabular regions, including schedules and itemized information.
-    \item \textbf{Text\_Paragraph:} blocks of printed or typewritten text.
+    \item \texttt{Signature\_Block}: visible signature marks in designated signing or execution areas.
+    \item \texttt{Official\_Seal}: visible seals and other official marks.
+    \item \texttt{Table\_Grid}: tabular regions, including schedules and itemized information.
+    \item \texttt{Text\_Paragraph}: blocks of printed or typewritten text.
 \end{itemize}
+
 A written annotation rubric will define how boundaries are drawn and how overlapping elements are labeled. For example, a seal overlapping a paragraph may be annotated separately from the text region so that both remain represented in the ground truth. The visibility and condition of signatures and seals will be considered during annotation; their detection will indicate the presence of a visual mark, not establish its authenticity.
 
 Annotation quality will be assessed through independent labeling of the test partition by two annotators, followed by review of disagreements. Agreement in class labels and the spatial overlap of matched boxes will be reported separately, as described in Section~\ref{sec:eval_dataset}.
@@ -1104,9 +1114,9 @@ The orders will cover five cases: properly ordered packages ($\mathrm{Inv}^*=0$,
 
 For each order, $\widehat{\mathrm{Inv}}(Q)$ and $\widehat{\mathrm{Moves}}(Q)$ will be checked against a brute-force oracle through $\mathrm{Acc}_{\mathrm{ord}}$, and $d_K$ will be reported per package. The proposed order, made by sorting accepted pairs by $q$, is correct whenever the pairing is correct, so it will not be scored on its own. Instead, the Inv left after applying each method's proposed order will be compared between the proposed system and Magic Auto-Sort, using a Wilcoxon signed-rank test on the per-package difference.
 
-\textbf{Test 4D: Ongoing-Contract Count.} This test will check how reliably the system reads the number of ongoing contracts, since that number sets how many slots the entry expands into. The Table\_Grid row-counting parser will run on every Statement of All Ongoing Contracts in the corpus. $\mathrm{Acc}_{n_j}$ will be reported with a Wilson interval, together with $\mathrm{MAE}_{n_j}$.
+\textbf{Test 4D: Ongoing-Contract Count.} This test evaluates how reliably the row-counting rule of Section~\ref{sec:checklist_matching} extracts the contract count $\hat{n}_j$ from the \emph{Statement of All Ongoing Contracts}, which governs dynamic slot expansion in the checklist matcher. The parser is evaluated on every \emph{Statement of All Ongoing Contracts} in the held-out test split and supplementary pool (excluding all training and validation documents). Ground truth $n_j^*$ is the true number of listed contracts verified by two annotators from the original forms (including $n_j^* = 0$ for \emph{``None''} declarations).
 
-The test will also measure what the gated repair $\phi_{\mathrm{num}}$ (Eq.~\eqref{eq:numeric_repair}) contributes. Both measures will be recorded before and after $\phi_{\mathrm{num}}$ is applied to numeric row-index tokens, ahead of counting. If natural OCR errors in row indices turn out to be too rare to show an effect, a synthetic set with injected homoglyph substitutions will also be run and reported separately.
+In addition to exact-count accuracy $\mathrm{Acc}_{n_j}$ (reported with a 95\% Wilson confidence interval) and mean absolute error $\mathrm{MAE}_{n_j}$ (Eq.~\eqref{eq:contract_count_metrics}), the test reports two operational safety metrics: the \textbf{unverified flag rate} ($\mathrm{Rate}_{\mathrm{unverified}}$, the share of statements routed to operator confirmation) and the \textbf{silent-error rate} ($\mathrm{SER}_{n_j} = N_{\hat{n}_j \ne n_j^* \wedge \text{not flagged}} / N_{\mathrm{soc}}$, the share of statements whose count is incorrect without triggering an \texttt{unverified} flag). Results are reported overall and stratified by (i)~single-page versus multi-page statements and (ii)~statements with versus without a numbered index column. To isolate the effect of the gated character repair $\phi_{\mathrm{num}}$ (Eq.~\eqref{eq:gated_repair}), all metrics are recorded before and after $\phi_{\mathrm{num}}$ is applied to index-column tokens; if natural OCR homoglyph errors in index columns are too rare in the held-out forms to measure an effect, a controlled synthetic set with injected homoglyph substitutions is evaluated and reported separately.
 
 \subsection{Dynamic Non-Occluding Stamp Placement}
 \label{sec:eval_stamp_placement}
@@ -1203,7 +1213,7 @@ End-to-end dossier throughput in pages per minute (PPM) for dossier $d$ is given
 \label{eq:throughput_ppm}
 \text{PPM}_d = \frac{60 \cdot N_d}{T_{\text{wall}}(d)}
 \end{equation}
-with $T_{\mathrm{wall}}(d)$ measured in seconds (or equivalently $60{,}000\cdot N_d/T_{\mathrm{wall}}(d)$ when logged in milliseconds). PPM is computed from wall-clock time and does not use the stage sum. Hardware resource utilization is quantified by the peak resident set size (Peak RSS, in MB) and the mean CPU utilization percentage across all active processor threads.
+with $T_{\mathrm{wall}}(d)$ measured in seconds (or equivalently $60{,}000\cdot N_d/T_{\mathrm{wall}}(d)$ when logged in milliseconds). PPM is computed from wall-clock time and does not use the stage sum. Hardware resource utilization is quantified by the peak resident set size (Peak RSS, in MB) across the full application process tree and the mean CPU utilization percentage across all active processor threads.
 
 \textbf{Protocol.} The benchmark is executed across the 10 workflow dossiers comprising 50 to 150 pages each (approximately $N=1{,}000$ pages in total), spanning native digital PDFs, clean scans (200--300 DPI), and degraded photocopies. All timings are captured on the target edge hardware environment (4 vCPU, 8 GB RAM running Ubuntu Linux) using high-resolution monotonic performance counters (\texttt{time.perf\_counter\_ns()}). The main benchmark runs in single-worker mode: one worker processes one page at a time through the stages in order, with the ONNX Runtime and OCR thread counts fixed and reported. Prior to data recording, a warm-up pass of 10 pages is executed and discarded to eliminate cold-start graph initialization, memory allocation, and cache-warming overhead.
 
@@ -1211,8 +1221,7 @@ Per-page stages are instrumented and timed individually per page: (1) Ghostscrip
 
 For each per-page stage, for $T_{\mathrm{perc}}$, and for $T_{\mathrm{perc}}^{\mathrm{direct}}$, the sample mean ($\bar T$), standard deviation ($s$), median (P50), and 95th percentile (P95) are reported in seconds (and milliseconds for stage-level granularity), accompanied by a 95\% confidence interval for the mean derived via file-level cluster bootstrap (1,000 resamples). Results are further stratified across the three document quality tiers to evaluate whether dense text layouts or scan noise increase OCR crop counts and execution times.
 
-Throughput under multi-page parallel load, if the deployment runs several workers, is reported separately as PPM. It is not compared against the 60\,ms budget and does not use the stage sum, because overlapping pages make per-stage durations no longer additive. To verify operational stability on resource-constrained office hardware, the full 1,000-page benchmark is repeated under strict process memory caps of 16 GB and 8 GB, recording Peak RSS, CPU saturation, and the incidence of any out-of-memory (OOM) faults.
-
+Throughput under multi-page parallel load, if the deployment runs several workers, is reported separately as PPM. It is not compared against the 60\,ms budget and does not use the stage sum, because overlapping pages make per-stage durations no longer additive. To verify operational stability on the target 4 vCPU, 8 GB RAM Ubuntu Linux host, memory utilization is profiled across the entire application process tree---encompassing the FastAPI worker, ONNX Runtime, RapidOCR, PyMuPDF, and spawned Ghostscript subprocesses---rather than the parent Python process alone. Before executing the 1,000-page benchmark, the baseline idle resident memory consumed by the operating system, PostgreSQL~16 database, and NGINX reverse proxy is measured and reported separately to establish available physical RAM headroom. The benchmark is then executed on the 8 GB host with swap disabled (\texttt{swapoff -a} and \texttt{MemorySwapMax=0}) so that memory exhaustion is neither hidden by disk paging nor absorbed as silent latency degradation. Peak memory is recorded via Linux cgroups~v2 (\texttt{memory.peak}) alongside 100\,ms interval polling of process-tree RSS, and any out-of-memory (OOM) terminations are logged from the kernel journal (\texttt{dmesg} / \texttt{systemd-oomd}). To verify stability on tighter office hardware without provisioning separate servers, the benchmark is additionally repeated on the same 8 GB host with the application cgroup capped at 4 GB (\texttt{MemoryMax=4G}, \texttt{MemorySwapMax=0}).
 \subsection{End-to-End Preparation Turnaround and Clerical Defect Reduction}
 \label{sec:eval_turnaround}
 
