@@ -1,0 +1,45 @@
+name: Google Chat push notifications
+
+on:
+  push:
+    branches:
+      - '**'
+
+permissions: {}
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send push notification
+        env:
+          GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          with open(os.environ['GITHUB_EVENT_PATH'], encoding='utf-8') as event_file:
+              event = json.load(event_file)
+
+          branch = event['ref'].removeprefix('refs/heads/')
+          commits = event.get('commits', [])
+          lines = [f"*{event['repository']['full_name']}* — push to *{branch}*",
+                   f"By: {event['sender']['login']}"]
+          for commit in commits:
+              lines.append(f"• {commit['id'][:7]} {commit['message'].splitlines()[0] if commit['message'] else '(no message)'}")
+          if not commits:
+              lines.append('No commit details included in the push event.')
+          lines.append(event.get('compare', event['repository']['html_url']))
+          payload = json.dumps({'text': '\n'.join(lines)}).encode('utf-8')
+          request = urllib.request.Request(
+              os.environ['GOOGLE_CHAT_WEBHOOK_URL'],
+              data=payload,
+              headers={'Content-Type': 'application/json; charset=UTF-8'},
+              method='POST',
+          )
+          with urllib.request.urlopen(request) as response:
+              if not 200 <= response.status < 300:
+                  raise RuntimeError(f'Google Chat returned HTTP {response.status}')
+          PY
