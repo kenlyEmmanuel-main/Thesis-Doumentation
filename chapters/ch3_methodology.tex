@@ -92,7 +92,7 @@ Interactive repositioning executes at smooth 60 frames per second through React 
 
 \subsection{Nginx Reverse Proxy \& Secure Access Gateway}
 The Nginx Reverse Proxy functions as the front-facing security gateway bridging client browser workspaces with the backend processing runtime \cite{ref58}.
-While the procurement platform and its sensitive document stores reside on an on-premise server to guarantee physical data sovereignty under the Data Privacy Act of 2012 (Republic Act No. 10173) \cite{ref6}, bidding teams often require the flexibility to collaborate across local area networks (LAN) or access the workspace remotely.
+The procurement platform and its sensitive document stores are intended to reside on an on-premise server under the contractor's control, while bidding teams may collaborate across local area networks (LAN) or access the workspace remotely. On-premise storage supports data protection but does not by itself establish compliance with the Data Privacy Act of 2012 (Republic Act No. 10173) \cite{ref6}.
 
 To secure these interactions, Nginx binds to standard HTTPS Port 443, terminating Transport Layer Security (TLS 1.3) before proxying authorized requests to the internal FastAPI daemon (\texttt{127.0.0.1:8000}).
 It simultaneously delivers the production React 19 single-page application build and caches high-frequency WebP image streams emitted by PyMuPDF \cite{ref39, ref40}.
@@ -161,7 +161,7 @@ To ensure visual non-interference, the engine models document content as a spati
 
 \subsection{Dual-Track Compilation \& Packaging (Track 1 \& Track 2)}
 The Dual-Track Compilation and Packaging Engine reconciles the legal requirement for visual presentation with the cryptographic integrity mandated for electronic public procurement \cite{ref42}.
-Modifying a digitally signed PDF---whether to apply page numbers, adjust orientation, or affix compliance marks---mutates its binary structure, permanently breaking its /ByteRange cryptographic digest and destroying its legal validity under Republic Act No. 8792 (Electronic Commerce Act) \cite{ref10} and Supreme Court A.M. No. 01-7-01-SC \cite{ref11}.
+Modifying a digitally signed PDF---whether to apply page numbers, adjust orientation, or affix compliance marks---can change signed bytes and invalidate cryptographic verification. The effects of any modification, including an incremental update, depend on the signature's validation rules and permissions; legal validity is a separate determination under Republic Act No. 8792 (Electronic Commerce Act) \cite{ref10} and Supreme Court A.M. No. 01-7-01-SC \cite{ref11}.
 
 To resolve this paradox, the compilation engine bifurcates output into two decoupled export tracks:
 
@@ -184,7 +184,7 @@ The On-Premise Server Environment establishes the physical execution substrate s
 Designed for practical enterprise deployment by bidding contractors, the platform is engineered to run as a self-contained server daemon on standard commodity multi-core computer hardware without requiring expensive cloud virtual machines or dedicated graphics processing units (GPUs).
 
 By leveraging native SIMD vector instruction sets to accelerate computer vision and PDF rendering pipelines directly on the CPU \cite{ref33, ref40}, the server environment achieves rapid processing throughput within a lightweight memory footprint.
-Storing all corporate assets in encrypted on-premise directories ensures that confidential pricing models, technical proposals, and trade secrets remain under the contractor's direct physical control, enforcing complete data privacy compliance under Republic Act No. 10173 \cite{ref6} while maintaining reliable system availability.
+Storing corporate assets in encrypted on-premise directories is intended to keep confidential pricing models, technical proposals, and trade secrets under the contractor's direct physical control. Encryption supports data protection, but compliance with Republic Act No. 10173 also depends on appropriate access controls and other organizational and technical safeguards \cite{ref6}.
 
 \section{Entity Relationship Diagram}
 \label{sec:erd_data_flow}
@@ -202,7 +202,7 @@ Table relationships are expressed using standard crow's foot notation, where dou
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.95\textwidth]{{figures/Figure 3.2}.png}
-\caption{Level 0 and Level 1 Data Flow Diagrams}
+\caption{Level 0 and Level 1 Entity Relationship Diagram}
 \label{fig:entity_relationship}
 \end{figure}
 
@@ -259,7 +259,14 @@ The following subsections detail the algorithmic flow and decision logic governi
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{{figures/Figure 3.3.1}.png}
-\caption{File Ingestion and Pre-processing Flowchart}
+\caption{Master Program Workflow Flowchart}
+\label{fig:master_program_flow}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{{figures/Figure 3.3.2}.png}
+\caption{Ingestion, Checklist Parsing, and JIT Stream Repair Flowchart}
 \label{fig:ingestion_flow}
 \end{figure}
 
@@ -273,8 +280,8 @@ Once repaired, PyMuPDF evaluates the Coordinate Transformation Matrix (CTM) to n
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{{figures/Figure 3.3.2}.png}
-\caption{Layout Segmentation and Targeted OCR Flowchart}
+\includegraphics[width=\textwidth]{{figures/Figure 3.3.3}.png}
+\caption{Cascaded Layout Segmentation and Defect Audit Flowchart}
 \label{fig:layout_ocr_flow}
 \end{figure}
 
@@ -284,17 +291,11 @@ In Stage 2, detected non-text elements (signatures and seals) bypass text recogn
 Conversely, detected text paragraph regions are cropped and transferred directly into shared C-memory buffers for RapidOCR processing (combining DBNet++ detection and SVTR character decoding).
 The extracted text tokens are subsequently evaluated using deterministic finite automaton (DFA) regular expressions to extract statutory title headers, execution dates, and checklist anchor keywords.
 
-\subsection{Pre-flight Statutory Audit \& Classification Flowchart}
+\subsection{Pre-flight Statutory Audit \& Classification}
 \label{sec:flowchart_statutory_audit}
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{{figures/Figure 3.3.3}.png}
-\caption{Pre-flight Statutory Audit \& Classification Flowchart}
-\label{fig:statutory_audit_flow}
-\end{figure}
 
-Figure~\ref{fig:statutory_audit_flow} depicts the pre-flight statutory compliance audit pipeline.
+The pre-flight statutory compliance audit follows the detection and recognition workflow in Figure~\ref{fig:layout_ocr_flow}.
 Extracted document metadata, layout regions, and textual tokens are evaluated against deterministic statutory rule parameters derived from Republic Act No. 12009 and standard GPPB templates.
 The rule engine verifies mandatory execution requirements on key legal affidavits, such as the Omnibus Sworn Statement (OSS) and Bid Securing Declaration (BSD), by confirming the presence and spatial co-location of authorized signature blocks and notary seals.
 Concurrently, regular expression engines evaluate execution dates against tender opening schedules to flag expired certificates or post-dated jurats.
@@ -454,7 +455,7 @@ The Nest resolves this inefficiency through local encrypted persistence coupled 
 
 \textbf{Credential Integrity Cards:} Stored instruments are displayed in an architectural grid. Each card details the official document title, issuing agency, page volume, designated internal custodian and immutable SHA-256 fingerprint.
 
-\textbf{Automated Expiry Safeguards:} The system continuously audits certificate validity dates extracted via RapidOCR against current system timestamps. Valid records display green status badges (GDrive Synced $\bullet$ Valid until Dec 31, 2026), whereas expired instruments are flagged with high-visibility crimson warnings (EXPIRED IN CLOUD $\bullet$ Needs Renewal). When parsing a tender checklist, The Nest auto-hydrates matching valid files into the workspace; if an expired certificate is detected, the system blocks automatic assignment and alerts the operator, preventing procedural disqualification under Section 30 of RA 9184 and Section 29 of RA 12009.
+\textbf{Automated Expiry Safeguards:} The system continuously audits certificate validity dates extracted via RapidOCR against current system timestamps. Valid records display green status badges (GDrive Synced $\bullet$ Valid until Dec 31, 2026), whereas expired instruments are flagged with high-visibility crimson warnings (EXPIRED IN CLOUD $\bullet$ Needs Renewal). When parsing a tender checklist, The Nest auto-hydrates matching valid files into the workspace; if an expired certificate is detected, the system blocks automatic assignment and alerts the operator, preventing procedural disqualification under Section 30 of RA 9184 and Section 59 of RA 12009.
 
 \subsection{Security Perimeter and Multi-User Administration}
 \label{sec:ui_security_admin}
@@ -763,10 +764,9 @@ A date that cannot be read or validated is flagged. It is never passed silently.
 
 \textbf{Contract Count for Ongoing Contracts.} The count $n_j$ is read from the Table\_Grid region of the Statement of All Ongoing Contracts. Numeric tokens in that region pass through the same gated repair $\phi_{\mathrm{num}}$ before the row-counting rule is applied. The count is compared with the true count in Test 4 (Section~\ref{sec:eval_checklist_matching}).
 
-\textbf{Text–Layout Compatibility Scoring}. Each unit ui is scored against each requirement $c_j$. 
-The score combines recognized text from RapidOCR with layout classes detected by YOLOv8, using a fixed weighted sum. 
+\textbf{Text--Layout Compatibility Scoring.} Each unit $u_i$ is scored against each requirement $c_j$.
+The score combines recognized text from RapidOCR with layout classes detected by YOLOv8, using a fixed weighted sum.
 It is not a jointly trained multimodal model:
-
 \begin{equation}
 \label{eq:match_score_combination}
 S(u_i,c_j)=w_1T_{ij}+w_2K_{ij}+w_3Y_{ij},\quad \sum_{h=1}^{3}w_h=1,\quad w_h\ge0.
@@ -1211,7 +1211,9 @@ Per-page stages are instrumented and timed individually per page: (1) Ghostscrip
 
 For each per-page stage, for $T_{\mathrm{perc}}$, and for $T_{\mathrm{perc}}^{\mathrm{direct}}$, the sample mean ($\bar T$), standard deviation ($s$), median (P50), and 95th percentile (P95) are reported in seconds (and milliseconds for stage-level granularity), accompanied by a 95\% confidence interval for the mean derived via file-level cluster bootstrap (1,000 resamples). Results are further stratified across the three document quality tiers to evaluate whether dense text layouts or scan noise increase OCR crop counts and execution times.
 
-Throughput under multi-page parallel load, if the deployment runs several workers, is reported separately as PPM. It is not compared against the 60\,ms budget and does not use the stage sum, because overlapping pages make per-stage durations no longer additive. To verify operational stability on resource-constrained office hardware, the full 1,000-page benchmark is repeated under strict process memory caps of 16 GB and 8 GB, recording Peak RSS, CPU saturation, and the incidence of any out-of-memory (OOM) faults.\subsection{End-to-End Preparation Turnaround and Clerical Defect Reduction}
+Throughput under multi-page parallel load, if the deployment runs several workers, is reported separately as PPM. It is not compared against the 60\,ms budget and does not use the stage sum, because overlapping pages make per-stage durations no longer additive. To verify operational stability on resource-constrained office hardware, the full 1,000-page benchmark is repeated under strict process memory caps of 16 GB and 8 GB, recording Peak RSS, CPU saturation, and the incidence of any out-of-memory (OOM) faults.
+
+\subsection{End-to-End Preparation Turnaround and Clerical Defect Reduction}
 \label{sec:eval_turnaround}
 
 The 10 workflow dossiers are arranged into 5 matched pairs with similar page counts and similar numbers of seeded faults. For pair $i$ and preparer $p$, one dossier of the pair is prepared manually and the other with the system, in an order counterbalanced across preparers. The paired time difference and the relative reduction over all pairs are:
@@ -1227,14 +1229,13 @@ $T_{\mathrm{system}}$ includes the operator's review and correction of flagged i
 Since the observations of one preparer are not independent, the primary analysis is a linear mixed-effects model of $\Delta_{ip}$ with a fixed intercept, a random intercept for the preparer, and the pair as a fixed effect; the intercept estimates the mean time saved. A two-tailed paired $t$-test and a Wilcoxon signed-rank test on the 15 differences are reported as sensitivity checks, both because a normality test has little power at this sample size and because they treat the 15 values as independent. The paired effect size $d_z=\operatorname{mean}(\Delta)/s_\Delta$ and a 95\% confidence interval for the mean difference are reported, and the results are also shown per preparer.
 
 \subsection{Local Interactive Workspace Usability Evaluation}
+\label{sec:eval_usability}
 
-Usability is measured with the System Usability Scale (SUS) questionnaire
-\cite{ref60}, which covers the satisfaction dimension of usability in the
-sense of ISO 9241-11 \cite{ref61}. For responses $x_1,\dots,x_{10}\in\{1,\dots,5\}$,
-
+Usability is measured with the System Usability Scale (SUS) questionnaire \cite{ref60}, which covers the satisfaction dimension of usability in the sense of ISO 9241-11 \cite{ref61}. For responses $x_1,\ldots,x_{10}\in\{1,\ldots,5\}$,
 \begin{equation}
-  \mathrm{SUS} = 2.5\left[\sum_{i\in\text{odd}}(x_i-1)+\sum_{i\in\text{even}}(5-x_i)\right]
+\label{eq:sus_score}
+\text{SUS} = 2.5 \left[ \sum_{i \in \text{odd}} (x_i - 1) + \sum_{i \in \text{even}} (5 - x_i) \right]
 \end{equation}
 which ranges from 0 to 100. A score of 68 is the commonly used industry average \cite{ref62}.
 
-\textbf{Protocol.} Five representative operators (procurement officers, contractor proposal staff, and administrative clerks) each complete fourtasks: (1) staging and ingesting a multi-file bid portfolio, (2) reviewing an audit alert for a missing notary seal, (3) manually adjusting an automated stamp placement, and (4) exporting the Track~1 and Track~2 packages. They then answer the 10-item SUS questionnaire. Task completion and time are recorded. The mean SUS is tested against 68 with a one-sided one-sample $t$-test ($H_1$: $\mathrm{SUS} > 68$), with a Wilcoxon signed-rank test as a check and a 95\% confidence interval for the mean. With only five respondents, the confidence interval is expected to be wide, so the result is reported as indicative.
+\textbf{Protocol.} Five representative operators (procurement officers, contractor proposal staff, and administrative clerks) each complete four tasks: (1) staging and ingesting a multi-file bid portfolio, (2) reviewing an audit alert for a missing notary seal, (3) manually adjusting an automated stamp placement, and (4) exporting the Track~1 and Track~2 packages. They then answer the 10-item SUS questionnaire. Task completion and time are recorded. The mean SUS is tested against 68 with a one-sided one-sample $t$-test ($H_1$: $\mathrm{SUS} > 68$), with a Wilcoxon signed-rank test as a check and a 95\% confidence interval for the mean. With only five respondents, the confidence interval is expected to be wide, so the result is reported as indicative.
