@@ -870,30 +870,34 @@ The selected model will be exported to ONNX format for execution on the target o
 \subsection{Development \& Hardware Expenditure}
 \label{sec:dev_expenditure}
 
-Table~\ref{tab:capital_expenditure} details the initial capital expenditures required to establish the edge development environment.
+Table~\ref{tab:capital_expenditure} presents the estimated resources required for the development and evaluation of the proposed system. A cloud-based virtual machine is included as a temporary environment for hosting and testing the prototype during the study. The cloud environment does not represent the system's intended long-term deployment. For formal deployment within a company, the application and its primary data are intended to reside on a company-controlled on-premise server. The acquisition and operating costs of that future server are outside the scope of the thesis budget. Documents used for cloud testing will be obtained with appropriate permission and sanitized where necessary. Evaluation results will be reported with the specifications of the test environment and will not be assumed to represent performance on a different on-premise server.
 
 \begin{table}[H]
 \centering
-\caption{Development and hardware expenditure}
+\caption{Estimated development and testing expenditure}
 \label{tab:capital_expenditure}
 \begin{singlespace}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{>{\raggedright\arraybackslash}p{5.5cm}>{\raggedright\arraybackslash}p{3.5cm}ccr}
+\begin{tabular}{>{\raggedright\arraybackslash}p{5.4cm}>{\raggedright\arraybackslash}p{4.4cm}>{\raggedright\arraybackslash}p{1.5cm}>{\raggedright\arraybackslash}p{2.2cm}>{\raggedright\arraybackslash}p{3.2cm}}
 \toprule[1.5pt]
-\textbf{Resource Item / Particulars} & \textbf{Link} & \textbf{Quantity} & \textbf{Unit Price} & \textbf{Cost (PHP -- \textpeso)} \\
+\textbf{Resource Item} & \textbf{Particulars} & \textbf{Quantity} & \textbf{Unit Cost (PHP)} & \textbf{Total Cost (PHP)} \\
 \midrule[1.0pt]
-Vultr Cloud Compute (Regular performance plan: 4vCPU, 8 GB RAM, 160 GB SSD), Manila Node & \url{https://www.vultr.com/pricing/} & 3 months & \textpeso{}2,250.00 & \textpeso{}6,750.00 \\
-Printing Logistics (Testing Paper \& High-Yield Printer Ink Consumables) & Office Procurement & 1 & \textpeso{}2,000.00 & \textpeso{}2,000.00 \\
-Physical Backup Storage (128GB High-Speed Flash Drive) & \url{https://shopee.ph/sandiskofficialstore} & 1pc & \textpeso{}650.00 & \textpeso{}650.00 \\
-Open-Source Runtimes (Ubuntu Linux, FastAPI, PostgreSQL, Ghostscript) & & 1 stack & \textpeso{}0.00 (Open Source) & \textpeso{}0.00 (Open Source) \\
-Google Cloud OAuth2 Single Sign-On Service (Developer Tier) & & 1 stack & \textpeso{}0.00 (Free Tier) & \textpeso{}0.00 (Free Tier) \\
+Vultr Cloud Compute, Regular Performance Plan (4 vCPU, 8 GB RAM, 160 GB SSD) & Temporary prototype hosting and testing; USD 40.00 per month & 3 months & \textpeso{}2,542.36 & \textpeso{}7,627.08 \\
+Printing of Test Documents & Paper and printer ink consumables; one allocation & 1 & \textpeso{}2,000.00 & \textpeso{}2,000.00 \\
+ADATA 1 TB AHD330 External Hard Drive & Backup of research materials & 1 unit & \textpeso{}4,950.00 & \textpeso{}4,950.00 \\
+Ubuntu, NGINX, FastAPI, PostgreSQL, and Other Runtimes & Application and processing software & 1 stack & Open source & No license purchase budgeted \\
+Google OAuth Sign-In & Authentication during testing & 1 integration & Not budgeted & No separate subscription budgeted \\
 \midrule[1.0pt]
-\multicolumn{3}{l}{\textbf{Total Estimated Capital Expenditure}} & \textbf{\textpeso{}4,900.00} & \textbf{\textpeso{}9,400.00} \\
+\multicolumn{4}{l}{\textbf{Total Estimated Expenditure}} & \textbf{\textpeso{}14,577.08} \\
 \bottomrule[1.5pt]
 \end{tabular}%
 }
 \end{singlespace}
 \end{table}
+
+The Vultr rate is USD 40.00 per month for the regular performance plan with 4 vCPU, 8 GB RAM, and a 160 GB SSD, as listed by \href{https://www.vpsbenchmarks.com/hosters/vultr/plans/regular_8gb_4cores}{VPSBenchmarks}. Converted at \textpeso{}63.559 per USD, the \href{https://www.bsp.gov.ph/Lists/RERB/Attachments/2398/13Nov2026.pdf}{Bangko Sentral ng Pilipinas reference exchange rate for 13 November 2026}, this amounts to \textpeso{}2,542.36 per month, or \textpeso{}7,627.08 for three months. The external hard drive price is taken from a \href{https://pcx.com.ph/products/adata-1tb-ahd330-ahd330-1tu31-external-hard-drive-black}{local supplier listing}.
+
+These figures are estimates and may change. Vultr Manila availability and the final checkout amount must be confirmed before purchase, and taxes, exchange fees, and optional services are excluded. The printing allocation is an older estimate retained for planning. Internet access and the GPU-enabled personal computer used for training are assumed to be available and are therefore not costed.
 
 
 \section{Gantt Chart}
