@@ -763,9 +763,10 @@ A date that cannot be read or validated is flagged. It is never passed silently.
 
 \textbf{Contract Count for Ongoing Contracts.} The count $n_j$ is read from the Table\_Grid region of the Statement of All Ongoing Contracts. Numeric tokens in that region pass through the same gated repair $\phi_{\mathrm{num}}$ before the row-counting rule is applied. The count is compared with the true count in Test 4 (Section~\ref{sec:eval_checklist_matching}).
 
-\textbf{Multimodal Compatibility Scoring.} Open item: specify the exact row-counting rule you implemented (for example, counting numbered rows or contract-number patterns). Your draft did not say how it works.
+\textbf{Text–Layout Compatibility Scoring}. Each unit ui is scored against each requirement $c_j$. 
+The score combines recognized text from RapidOCR with layout classes detected by YOLOv8, using a fixed weighted sum. 
+It is not a jointly trained multimodal model:
 
-Each unit $u_i$ is scored against each requirement $c_j$:
 \begin{equation}
 \label{eq:match_score_combination}
 S(u_i,c_j)=w_1T_{ij}+w_2K_{ij}+w_3Y_{ij},\quad \sum_{h=1}^{3}w_h=1,\quad w_h\ge0.
@@ -1219,13 +1220,14 @@ $T_{\mathrm{system}}$ includes the operator's review and correction of flagged i
 Since the observations of one preparer are not independent, the primary analysis is a linear mixed-effects model of $\Delta_{ip}$ with a fixed intercept, a random intercept for the preparer, and the pair as a fixed effect; the intercept estimates the mean time saved. A two-tailed paired $t$-test and a Wilcoxon signed-rank test on the 15 differences are reported as sensitivity checks, both because a normality test has little power at this sample size and because they treat the 15 values as independent. The paired effect size $d_z=\operatorname{mean}(\Delta)/s_\Delta$ and a 95\% confidence interval for the mean difference are reported, and the results are also shown per preparer.
 
 \subsection{Local Interactive Workspace Usability Evaluation}
-\label{sec:eval_usability}
 
-Usability is measured with the System Usability Scale (SUS) questionnaire (Brooke, 1996), which covers the satisfaction dimension of usability in the sense of ISO 9241-11. For responses $x_1,\ldots,x_{10}\in\{1,\ldots,5\}$,
+Usability is measured with the System Usability Scale (SUS) questionnaire
+\cite{ref60}, which covers the satisfaction dimension of usability in the
+sense of ISO 9241-11 \cite{ref61}. For responses $x_1,\dots,x_{10}\in\{1,\dots,5\}$,
+
 \begin{equation}
-\label{eq:sus_score}
-\text{SUS} = 2.5 \left[ \sum_{i \in \text{odd}} (x_i - 1) + \sum_{i \in \text{even}} (5 - x_i) \right]
+  \mathrm{SUS} = 2.5\left[\sum_{i\in\text{odd}}(x_i-1)+\sum_{i\in\text{even}}(5-x_i)\right]
 \end{equation}
-which ranges from 0 to 100. A score of 68 is the commonly used industry average.
+which ranges from 0 to 100. A score of 68 is the commonly used industry average \cite{ref62}.
 
-\textbf{Protocol.} 5 representative operators (procurement officers, contractor proposal staff, and administrative clerks) each complete four tasks: (1) staging and ingesting a multi-file bid portfolio, (2) reviewing an audit alert for a missing notary seal, (3) manually adjusting an automated stamp placement, and (4) exporting the Track 1 and Track 2 packages. They then answer the 10-item SUS questionnaire. Task completion and time are recorded. The mean SUS is tested against 68 with a one-sided one-sample $t$-test ($H_1$: SUS $>68$), with a Wilcoxon signed-rank test as a check and a 95\% confidence interval for the mean.
+\textbf{Protocol.} Five representative operators (procurement officers, contractor proposal staff, and administrative clerks) each complete fourtasks: (1) staging and ingesting a multi-file bid portfolio, (2) reviewing an audit alert for a missing notary seal, (3) manually adjusting an automated stamp placement, and (4) exporting the Track~1 and Track~2 packages. They then answer the 10-item SUS questionnaire. Task completion and time are recorded. The mean SUS is tested against 68 with a one-sided one-sample $t$-test ($H_1$: $\mathrm{SUS} > 68$), with a Wilcoxon signed-rank test as a check and a 95\% confidence interval for the mean. With only five respondents, the confidence interval is expected to be wide, so the result is reported as indicative.
