@@ -92,11 +92,11 @@ Interactive repositioning executes at smooth 60 frames per second through React 
 
 \subsection{Nginx Reverse Proxy \& Secure Access Gateway}
 The Nginx Reverse Proxy functions as the front-facing security gateway bridging client browser workspaces with the backend processing runtime \cite{ref58}.
-The procurement platform and its sensitive document stores are intended to reside on an on-premise server under the contractor's control, while bidding teams may collaborate across local area networks (LAN) or access the workspace remotely. On-premise storage supports data protection but does not by itself establish compliance with the Data Privacy Act of 2012 (Republic Act No. 10173) \cite{ref6}.
+In the proposed deployment, the application and its primary document stores reside on a company-controlled on-premise server, and authorized personnel reach the workspace through a standard web browser, either over the local area network (LAN) or remotely across the internet.
 
 To secure these interactions, Nginx binds to standard HTTPS Port 443, terminating Transport Layer Security (TLS 1.3) before proxying authorized requests to the internal FastAPI daemon (\texttt{127.0.0.1:8000}).
 It simultaneously delivers the production React 19 single-page application build and caches high-frequency WebP image streams emitted by PyMuPDF \cite{ref39, ref40}.
-This architecture ensures that team members can work remotely with full transport encryption while ensuring that confidential commercial bid amounts, proprietary technical narratives, and administrative credentials remain strictly stored on-premise.
+Transport encryption over HTTPS, loopback-bound backend services, and authenticated sessions constitute the platform's principal technical safeguards for confidential commercial bid amounts, proprietary technical narratives, and administrative credentials that remain stored on-premise. These safeguards are intended to reduce exposure; they do not guarantee immunity from compromise, and on-premise storage does not by itself establish compliance with the Data Privacy Act of 2012 (Republic Act No. 10173) \cite{ref6}, which also depends on organizational and physical controls.
 
 \subsection{FastAPI Application Server \& Pipeline Orchestrator}
 The FastAPI Application Server functions as the central asynchronous runtime connecting all client presentation requests, persistent repositories, and backend document processing pipelines \cite{ref54}.
@@ -437,21 +437,21 @@ Figure~\ref{fig:ui_stamp_studio} illustrates the dedicated Stamp Placement and M
 
 The central canvas visualizes the candidate search envelope restricted to the lower fourth quadrant ($i\in[43,51]$, $j\in[19,29]$ under portrait orientation). Detected layout boxes are displayed with their dilated safety margins ($\delta_p=15\text{pt}$). The calculated endorsement stamp ($43\text{mm}\times18\text{mm}$) is rendered at the optimal, collision-free coordinate pocket with an active outline and corner resize/drag handles, allowing operators to manually fine-tune coordinates whenever a congested margin triggers an automated \texttt{needs\_review} pre-flight flag.
 
-\subsection{The Nest: Persistent Corporate Asset Vault and Cloud Synchronization}
+\subsection{The Nest: Persistent Corporate Asset Vault}
 \label{sec:ui_nest_vault}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{{figures/Figure 3.4.5}.png}
-\caption{The Nest: Persistent Corporate Asset Vault and Cloud Synchronization}
+\caption{The Nest: Persistent Corporate Asset Vault}
 \label{fig:ui_nest}
 \end{figure}
 
 Figure~\ref{fig:ui_nest} presents the interface for The Nest, the local corporate asset vault dedicated to managing recurring administrative and legal eligibility credentials (e.g., Mayor's Permits, SEC Certificates, PhilGEPS Platinum Registrations, and Audited Financial Statements). In traditional bidding workflows, administrative personnel repeatedly search and upload identical corporate files across independent tenders, frequently risking disqualification by attaching outdated or expired certificates.
 
-The Nest resolves this inefficiency through local encrypted persistence coupled with bidirectional cloud synchronization:
+The Nest resolves this inefficiency through encrypted local persistence on the company's on-premise server. The platform provides no built-in cloud synchronization: primary assets in The Nest, active tender workspaces, and exported PDF packages are retained on-premise, and the application neither mirrors nor replicates them to an external cloud service.
 
-\textbf{Cloud Mirroring Banner:} Prominently displays the active synchronization status with the organization's cloud repository. A ``Force Sync Drive'' button enables instant cache invalidation and re-indexing of remote assets while maintaining an encrypted local mirror on the edge server under AES-256-GCM.
+\textbf{On-Premise Custody:} The Nest is intended to protect stored master assets using AES-256-GCM. Authorized users may independently back up selected assets, workspaces, or exported PDF files to Google Drive outside the application. Such copies are stored in the cloud and are not managed by the platform.
 
 \textbf{Credential Integrity Cards:} Stored instruments are displayed in an architectural grid. Each card details the official document title, issuing agency, page volume, designated internal custodian and immutable SHA-256 fingerprint.
 
