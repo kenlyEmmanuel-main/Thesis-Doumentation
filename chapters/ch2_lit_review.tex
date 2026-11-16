@@ -72,7 +72,7 @@ Word Error Rate applies an identical Levenshtein formulation computed across whi
 
 In downstream information extraction, post-OCR processing operates across four principal methodology families: dictionary lookup, statistical language modeling, neural sequence-to-sequence correction, and deterministic rule-based pattern matching.
 While neural language models offer contextual correction, their probabilistic nature introduces stochastic hallucinations, non-deterministic latency, and potential privacy liabilities in compliance-critical pipelines.
-Consequently, deterministic rule-based verification provides mathematically bounded execution guarantees and zero hallucination risk, making it the required standard for regulatory data extraction.
+Consequently, deterministic rule-based verification uses explicit rules and avoids the generative hallucinations associated with language models; however, extraction errors may still arise from OCR errors, incomplete rules, or unexpected document formats.
 
 Fuzzy string comparison accommodates optical noise through normalized Levenshtein similarity:
 \begin{equation}
@@ -252,8 +252,8 @@ This ledger cryptographically binds the master SHA-256 digest of the Track 1 pri
 In systems engineering and software specification, statutory frameworks establish the non-negotiable operational boundary conditions, domain taxonomies, and procedural invariants that govern automated workflows.
 In the Republic of the Philippines, public procurement was historically codified under Republic Act No. 9184, the Government Procurement Reform Act (GPRA) of 2003, which standardized Philippine Bidding Documents (PBDs), mandated competitive bidding, and established Bids and Awards Committees (BAC) across all state procuring entities \cite{ref1}.
 On July 20, 2024, the statutory baseline was modernized through Republic Act No. 12009, the New Government Procurement Act (NGPA), repealing RA 9184 to mandate end-to-end electronic procurement and e-bidding through PhilGEPS \cite{ref2}.
-Pursuant to Section 112 of the NGPA Implementing Rules and Regulations, GPPB Circular No. 01-2025 establishes a multi-year phased transition period (2025–2028), authorizing procuring entities to operate in a hybrid administrative state where traditional physical stamped binders and encrypted digital e-bids are concurrently accepted \cite{ref7}.
-Crucially, under Section 30 of RA 9184 and Section 59 of RA 12009, bid evaluation is strictly governed by a non-discretionary "pass/fail" criterion \cite{ref1, ref2, ref46}: the BAC exercises zero clerical discretion, and any missing legal mark, unexecuted notary jurat, or procedural omission results in summary disqualification \cite{ref46}.
+GPPB Circular No. 01-2025 provides guidance on the transition under Section 113, in relation to Section 115, of RA 12009 and its Implementing Rules and Regulations. It identifies a three-year transition period beginning with the approval of the new standard procurement forms on May 14, 2025 \cite{ref7}.
+Under Section 59 of RA 12009, the BAC conducts a preliminary examination of the technical components of bids using pass/fail criteria to determine whether the required documents are present. Only bids determined to contain all required technical-component documents proceed to opening and evaluation of their financial component \cite{ra12009act}.
 
 \subsection{Digital Evidentiary Preservation, Cryptographic Non-Repudiation, and Edge Data Sovereignty}
 
@@ -392,7 +392,7 @@ Furthermore, rather than relying on legacy Tesseract 4.0—whose rigid line-find
 The Differentiable Binarization (DBNet++) detection head natively isolates multi-oriented, arbitrary-angled text polygon proposal strips directly in memory, which are subsequently cropped and normalized for SVTR character recognition without intermediate disk rasterization or full-page bitmap deskewing \cite{ref52}.
 
 Finally, to resolve macro-orientation disparities---such as landscape-oriented financial statements, engineering drawings, and rotated municipal permits---the platform avoids destructive raster rotation altogether.
-Instead, the system leverages the ISO 32000 Coordinate Transformation Matrix (CTM) during Track 1 compilation, applying 3 x 3 affine transformation operators ([a, b, c, d, e, f]) to normalize page geometries to uniform A4 portrait dimensions and permanently bake non-occluding stamps in sub-millisecond execution time on commodity multi-core CPUs.
+Instead, the system leverages the ISO 32000 Coordinate Transformation Matrix (CTM) during Track 1 compilation, applying 3 x 3 affine transformation operators ([a, b, c, d, e, f]) to normalize page geometries to uniform A4 portrait dimensions and apply stamps intended to avoid detected content; the execution time on commodity multi-core CPUs will be measured during evaluation.
 Documents exhibiting extreme physical damage or scanning skew exceeding autonomous confidence thresholds are routed to the interactive staging workspace for human-in-the-loop verification, ensuring rigorous compliance without introducing unhandled pipeline exceptions.
 
 \subsection{Information Extraction From Scanned Invoices using Machine Learning, OCR and Spatial Feature Mapping Techniques}
