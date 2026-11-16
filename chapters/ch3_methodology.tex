@@ -455,7 +455,7 @@ The Nest resolves this inefficiency through local encrypted persistence coupled 
 
 \textbf{Credential Integrity Cards:} Stored instruments are displayed in an architectural grid. Each card details the official document title, issuing agency, page volume, designated internal custodian and immutable SHA-256 fingerprint.
 
-\textbf{Automated Expiry Safeguards:} The system continuously audits certificate validity dates extracted via RapidOCR against current system timestamps. Valid records display green status badges (GDrive Synced $\bullet$ Valid until Dec 31, 2026), whereas expired instruments are flagged with high-visibility crimson warnings (EXPIRED IN CLOUD $\bullet$ Needs Renewal). When parsing a tender checklist, The Nest auto-hydrates matching valid files into the workspace; if an expired certificate is detected, the system blocks automatic assignment and alerts the operator, preventing procedural disqualification under Section 30 of RA 9184 and Section 59 of RA 12009.
+\textbf{Automated Expiry Safeguards:} The system checks stored credential validity dates and displays their status in The Nest. Valid records display green status badges, while expired instruments are marked with a prominent EXPIRED --- Needs Renewal warning. When a tender checklist is parsed, matching credentials may be automatically attached to their corresponding workspace slots. If an attached credential is expired, the warning remains visible and the credential receives a Fail audit status. The operator can then review and replace it with a valid document before finalizing the package.
 
 \subsection{Security Perimeter and Multi-User Administration}
 \label{sec:ui_security_admin}
