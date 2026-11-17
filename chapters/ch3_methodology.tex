@@ -43,27 +43,27 @@ The Checklist Parser and Matcher Engine translates the procuring entity's tender
 
 Upon receiving the Channel A checklist, the parser extracts available text from native digital documents using PyMuPDF \cite{ref40}. If the checklist consists of scanned pages without a usable text layer, the pages are routed through RapidOCR before parsing. The resulting text is examined using regular expressions and heading patterns to identify checklist categories, requirement titles, and itemized clauses \cite{ref25,ref26}. These extracted requirements are recorded in a structured checklist representation (\texttt{checklist\_state}).
 
-Each checklist requirement contains an official title, a set of relevant keywords, expected document layout classes, a mandatory status, and an expected document count. Most requirements correspond to one submission slot. For the ongoing-contracts requirement, the count is derived from the bidder's Statement of All Ongoing Contracts and determines the number of slots associated with that entry. The structured checklist is also used to retrieve potentially relevant recurring credentials from The Nest.
+Each checklist requirement contains an official title, a set of relevant keywords, expected document layout classes, a mandatory status, and an expected document count. Most requirements correspond to one submission slot. For the ongoing-contracts requirement, the count is derived from the bidder's Statement of All Ongoing Contracts and determines the number of slots associated with that entry. The structured checklist is also used to retrieve potentially relevant recurring credentials from the Document Repository.
 
 For document-to-checklist matching, the engine compares the extracted titles and keywords of each document unit with the recorded requirements. It uses OCR-aware weighted edit similarity to account for selected character confusions, such as letters being recognized as visually similar numerals \cite{docxb1}. Textual similarity is combined with evidence from the layout classes detected on the document, producing a compatibility score for each document--requirement pair.
 
 The matcher evaluates these scores through a one-to-one assignment process, ensuring that each document unit fills at most one slot and each slot accepts at most one unit. Mandatory slots without an accepted match are flagged as potentially missing, while unmatched document units are reported as extraneous submissions. Accepted matches with similar competing scores are flagged for operator review. The resulting slot assignments also support sequence verification and the proposed arrangement of documents according to the tender checklist.
 
-\subsection{The Nest (Company Asset Archive)}
-The Company Asset Archive, designated within the platform as "The Nest," serves as the persistent, local storage subsystem for recurring corporate eligibility credentials.
+\subsection{Document Repository}
+The Document Repository serves as the persistent, local storage subsystem for recurring corporate eligibility credentials.
 In Philippine public procurement, prospective contractors are required to submit identical baseline legal and financial instruments across multiple independent bidding tenders, including local government Mayor's or Business Permits, Bureau of Internal Revenue (BIR) Tax Clearances, Department of Trade and Industry (DTI) or Securities and Exchange Commission (SEC) certificates, and Audited Financial Statements (AFS) \cite{ref1, ref46}.
 
-To eliminate repetitive manual searching and redundant disk uploads, The Nest maintains an encrypted local repository organized into multi-tier functional categories (\texttt{Legal/}, \texttt{Technical/}, \texttt{Financial/}, and \texttt{Brochures/}).
-When the Checklist Parser emits required tender slots, the system automatically scans The Nest, performs content-aware token matching against the extracted checklist requirements, and auto-hydrates matching files directly into their designated submission slots in the workspace ([\ensuremath{\surd} Attached from Nest]).
+To eliminate repetitive manual searching and redundant disk uploads, the Document Repository maintains an encrypted local repository organized into multi-tier functional categories (\texttt{Legal/}, \texttt{Technical/}, \texttt{Financial/}, and \texttt{Brochures/}).
+When the Checklist Parser emits required tender slots, the system automatically scans the Document Repository, performs content-aware token matching against the extracted checklist requirements, and auto-hydrates matching files directly into their designated submission slots in the workspace ([\ensuremath{\surd} Attached from Document Repository]).
 Stored assets are evaluated for expiration dates and validity periods, displaying visual warning badges ([\ensuremath{\triangle} EXPIRED] or [! MISSING]) to alert administrative personnel of compliance gaps before project staging proceeds.
-Master files residing in The Nest remain strictly read-only and immutable; all files are encrypted at rest using the AES-256-GCM authenticated cipher standard \cite{ref56} in local PostgreSQL storage \cite{ref55}.
+Master files residing in the Document Repository remain strictly read-only and immutable; all files are encrypted at rest using the AES-256-GCM authenticated cipher standard \cite{ref56} in local PostgreSQL storage \cite{ref55}.
 Project-specific annotations and compliance stamps are staged as isolated session overlays, ensuring that reusable corporate records are never corrupted across tender lifecycles.
 
-\subsection{The Stamp Album (Digital Seal Catalog)}
-The Stamp Album functions as the centralized repository and configuration catalog for official corporate graphic marks, compliance stamps, and authorized signatory profiles.
+\subsection{Digital Seal Registry}
+The Digital Seal Registry functions as the centralized repository and configuration catalog for official corporate graphic marks, compliance stamps, and authorized signatory profiles.
 Administrative procurement guidelines mandate that physical copies of submitted bidding portfolios be marked with specific legal endorsements, including "Certified True Copy from Original," "Original Copy No. 1," authorized signatory initials, and project-specific conforme blocks \cite{ref46}.
 
-Within the platform, the Stamp Album manages these assets through a persistent database model that catalogs graphic files alongside geometric and aesthetic configuration parameters \cite{ref45}.
+Within the platform, the Digital Seal Registry manages these assets through a persistent database model that catalogs graphic files alongside geometric and aesthetic configuration parameters \cite{ref45}.
 Upon image ingestion, an automated background cleanup utility evaluates pixel matrices to strip opaque white backgrounds and convert non-content margins into clean alpha transparency, while strictly preserving original ink color profiles (such as red municipal notarization seals and blue ballpoint signatures) in accordance with empirical stamp detection standards \cite{ref49}.
 Users can configure physical bounding box dimensions ($(w_s, h_s)$), target margin zones, opacity levels, and dynamic date bindings.
 When a compliance stamp is selected during project preparation, its geometric properties are passed directly to the active dodging engine for whitespace evaluation and subsequently to the coordinate transformation pipeline for permanent visual application.
@@ -88,7 +88,7 @@ The system replaces this paradigm through decoupled server-side rasterization an
 \textbf{Framer Motion Declarative Vector Overlays:} Compliance stamps, defect inspection bounding boxes, and drag-and-drop handles are rendered directly within the browser's hardware-accelerated Document Object Model (DOM) using CSS transforms (transform: translate3d(...)) and Scalable Vector Graphics \cite{ref37, ref38}.
 Interactive repositioning executes at smooth 60 frames per second through React 19's virtual DOM reconciliation \cite{ref36} without intermediate canvas re-rasterization.
 
-\textbf{Automated Checklist Sorter \& Staging Grid:} Coordinates the slotted attachment grid, displaying auto-hydrated files from The Nest alongside ad-hoc uploads from Channel B, allowing manual drag-and-drop sequencing and document lockout toggles (\texttt{isSigned = true}).
+\textbf{Automated Checklist Sorter \& Staging Grid:} Coordinates the slotted attachment grid, displaying auto-hydrated files from the Document Repository alongside ad-hoc uploads from Channel B, allowing manual drag-and-drop sequencing and document lockout toggles (\texttt{isSigned = true}).
 
 \subsection{Nginx Reverse Proxy \& Secure Access Gateway}
 The Nginx Reverse Proxy functions as the front-facing security gateway bridging client browser workspaces with the backend processing runtime \cite{ref58}.
@@ -222,14 +222,14 @@ It also maps directly to the on-disk storage directory (upload\_directory), isol
 Rather than splitting dynamic procurement assets across dozens of rigid tables, bid\_packages uses three binary JSON (JSONB) columns to track staging operations.
 The documents\_meta column stores an ordered array of staged attachments, recording sequence numbers, Ghostscript JIT sanitization flags, and YOLOv8-Doc defect verification flags (confirming wet signatures and notary seals on affidavits \cite{ref1, ref46}).
 The stamp\_state column maps canvas coordinates (x,y), rotation, and clearance metrics, recording the placement and its calculated clearance from detected document elements.
-Finally, checklist\_state tracks requirements parsed from the applicable checklist, recording which files were auto-hydrated from The Nest and which items remain missing.
+Finally, checklist\_state tracks requirements parsed from the applicable checklist, recording which files were auto-hydrated from the Document Repository and which items remain missing.
 
-\subsection{The Nest Asset Archive (nest\_assets)}
+\subsection{Document Repository (nest\_assets)}
 The nest\_assets table stores recurring corporate eligibility credentials---such as Mayor's Permits, BIR Tax Clearances, and SEC/DTI registrations---that bidders must repeatedly submit across multiple tenders \cite{ref1, ref46}.
 Each record links to the administrative user who uploaded it (registered\_by referencing users.id) and tracks its statutory category (LEGAL, TECHNICAL, FINANCIAL) along with an immutable SHA-256 binary hash (sha256\_hash) \cite{ref43}.
 When a tender checklist is parsed, the system checks nest\_assets; if a matched document has passed its expiry\_date, the system auto-hydrates the file but attaches a visual warning ([\ensuremath{\triangle} EXPIRED]), preventing summary disqualification under Section 30 of RA 9184 and RA 12009.
 
-\subsection{The Stamp Album Graphic Catalog (company\_stamps)}
+\subsection{Digital Seal Registry (company\_stamps)}
 The company\_stamps table functions as the persistent catalog of official corporate seals, compliance marks, and authorized signatory profiles \cite{ref46}.
 It links to the administrative uploader (uploader\_id referencing users.id) and stores the image path (stamp\_url) alongside default typographical point dimensions (default\_width, default\_height).
 The table enforces an alpha-clearing rule (alpha\_cleared = TRUE), ensuring that background white space is stripped to transparency while preserving authentic ink pigments (such as red notarization seals and blue ballpoint signatures \cite{ref49}) so stamps do not obscure underlying text when placed on document margins.
@@ -311,7 +311,7 @@ Verification flags (Pass, Warning, or Fail) alongside missing requirement logs a
 \label{fig:stamp_placement_flow}
 \end{figure}
 
-Figure~\ref{fig:stamp_placement_flow} defines the decision logic governing dynamic non-occluding compliance stamp placement and margin clearance evaluation. The process initiates when a required endorsement stamp or pagination mark is staged from the Stamp Album, retrieving its bounding dimensions ($w_s \times h_s$) and targeting candidate margin envelopes restricted primarily to the lower fourth quadrant. Detected document features---including narrative text blocks, authorized signatures, notary seals, and tabular schedules---are aggregated into unified obstacle boundaries expanded by an outward safety dilation buffer ($\delta_p = 15$ pt) to eliminate character clipping. The decision sequence evaluates candidate grid positions across two distinct operational pathways:
+Figure~\ref{fig:stamp_placement_flow} defines the decision logic governing dynamic non-occluding compliance stamp placement and margin clearance evaluation. The process initiates when a required endorsement stamp or pagination mark is staged from the Digital Seal Registry, retrieving its bounding dimensions ($w_s \times h_s$) and targeting candidate margin envelopes restricted primarily to the lower fourth quadrant. Detected document features---including narrative text blocks, authorized signatures, notary seals, and tabular schedules---are aggregated into unified obstacle boundaries expanded by an outward safety dilation buffer ($\delta_p = 15$ pt) to eliminate character clipping. The decision sequence evaluates candidate grid positions across two distinct operational pathways:
 
 \textbf{Nominal Branch (Collision-Free Clearance, $n = 0$):} If open whitespace accommodating the stamp envelope is located within the target quadrant, the engine commits the optimal coordinates to the session overlay, with no overlap detected against the modeled obstacle boundaries.
 
@@ -353,7 +353,7 @@ Figure~\ref{fig:ui_ingestion} depicts the primary onboarding view of the workspa
 The interface decouples the procuring entity's regulatory criteria from project-specific bidding assets:
 \begin{enumerate}
     \item \textbf{Channel A (Tender Checklist Reference):} A dedicated intake panel where the operator uploads the checklist or submission requirements applicable to the procurement.
-    Upon receipt, the backend DFA regex parser extracts mandatory checklist slots, displaying a real-time extraction badge and providing a one-click trigger to auto-hydrate corresponding corporate credentials from \emph{The Nest}.
+    Upon receipt, the backend DFA regex parser extracts mandatory checklist slots, displaying a real-time extraction badge and providing a one-click trigger to auto-hydrate corresponding corporate credentials from the \emph{Document Repository}.
     \item \textbf{Channel B (Project Bid Enclosures):} A high-surface-area, dashed drag-and-drop dropzone allowing operators to ingest multi-file PDF submissions, scanned affidavits, and multi-page contract bundles directly from local storage, workspace archives, or external cloud storage.
 \end{enumerate}
 
@@ -401,7 +401,7 @@ The navigator color-codes each card according to its statutory verification stat
 
 \textbf{Inverted Sequence (Amber Warning):} Documents identified as out of order relative to the regulatory sequence. The card displays a dedicated ``Shift to Position'' action button, allowing the operator to resolve the inversion in a single click.
 
-\textbf{Missing Attachment Defect (Red Alert):} Mandatory checklist items ($M_j=1$) for which no uploaded document satisfied the acceptance threshold ($\max_i S(u_i,c_j)<\tau=0.65$). The card displays an inline action button allowing immediate manual file injection or retrieval from The Nest.
+\textbf{Missing Attachment Defect (Red Alert):} Mandatory checklist items ($M_j=1$) for which no uploaded document satisfied the acceptance threshold ($\max_i S(u_i,c_j)<\tau=0.65$). The card displays an inline action button allowing immediate manual file injection or retrieval from the Document Repository.
 
 \textbf{Computer Vision Entity Tags:} Compact monospace chips indicating detected layout classes (Signature\_Block, Official\_Seal, Table\_Grid) and verified OCR keyword tokens.
 
@@ -437,25 +437,25 @@ Figure~\ref{fig:ui_stamp_studio} illustrates the dedicated Stamp Placement and M
 
 The central canvas visualizes the candidate search envelope restricted to the lower fourth quadrant ($i\in[43,51]$, $j\in[19,29]$ under portrait orientation). Detected layout boxes are displayed with their dilated safety margins ($\delta_p=15\text{pt}$). The calculated endorsement stamp ($43\text{mm}\times18\text{mm}$) is rendered at the optimal, collision-free coordinate pocket with an active outline and corner resize/drag handles, allowing operators to manually fine-tune coordinates whenever a congested margin triggers an automated \texttt{needs\_review} pre-flight flag.
 
-\subsection{The Nest: Persistent Corporate Asset Vault}
+\subsection{Document Repository: Persistent Corporate Asset Vault}
 \label{sec:ui_nest_vault}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{{figures/Figure 3.4.5}.png}
-\caption{The Nest: Persistent Corporate Asset Vault}
+\caption{Document Repository: Persistent Corporate Asset Vault}
 \label{fig:ui_nest}
 \end{figure}
 
-Figure~\ref{fig:ui_nest} presents the interface for The Nest, the local corporate asset vault dedicated to managing recurring administrative and legal eligibility credentials (e.g., Mayor's Permits, SEC Certificates, PhilGEPS Platinum Registrations, and Audited Financial Statements). In traditional bidding workflows, administrative personnel repeatedly search and upload identical corporate files across independent tenders, frequently risking disqualification by attaching outdated or expired certificates.
+Figure~\ref{fig:ui_nest} presents the interface for the Document Repository, the local corporate asset vault dedicated to managing recurring administrative and legal eligibility credentials (e.g., Mayor's Permits, SEC Certificates, PhilGEPS Platinum Registrations, and Audited Financial Statements). In traditional bidding workflows, administrative personnel repeatedly search and upload identical corporate files across independent tenders, frequently risking disqualification by attaching outdated or expired certificates.
 
-The Nest resolves this inefficiency through encrypted local persistence on the company's on-premise server. The platform provides no built-in cloud synchronization: primary assets in The Nest, active tender workspaces, and exported PDF packages are retained on-premise, and the application neither mirrors nor replicates them to an external cloud service.
+The Document Repository resolves this inefficiency through encrypted local persistence on the company's on-premise server. The platform provides no built-in cloud synchronization: primary assets in the Document Repository, active tender workspaces, and exported PDF packages are retained on-premise, and the application neither mirrors nor replicates them to an external cloud service.
 
-\textbf{On-Premise Custody:} The Nest is intended to protect stored master assets using AES-256-GCM. Authorized users may independently back up selected assets, workspaces, or exported PDF files to Google Drive outside the application. Such copies are stored in the cloud and are not managed by the platform.
+\textbf{On-Premise Custody:} the Document Repository is intended to protect stored master assets using AES-256-GCM. Authorized users may independently back up selected assets, workspaces, or exported PDF files to Google Drive outside the application. Such copies are stored in the cloud and are not managed by the platform.
 
 \textbf{Credential Integrity Cards:} Stored instruments are displayed in an architectural grid. Each card details the official document title, issuing agency, page volume, designated internal custodian and immutable SHA-256 fingerprint.
 
-\textbf{Automated Expiry Safeguards:} The system checks stored credential validity dates and displays their status in The Nest. Valid records display green status badges, while expired instruments are marked with a prominent EXPIRED --- Needs Renewal warning. When a tender checklist is parsed, matching credentials may be automatically attached to their corresponding workspace slots. If an attached credential is expired, the warning remains visible and the credential receives a Fail audit status. The operator can then review and replace it with a valid document before finalizing the package.
+\textbf{Automated Expiry Safeguards:} The system checks stored credential validity dates and displays their status in the Document Repository. Valid records display green status badges, while expired instruments are marked with a prominent EXPIRED --- Needs Renewal warning. When a tender checklist is parsed, matching credentials may be automatically attached to their corresponding workspace slots. If an attached credential is expired, the warning remains visible and the credential receives a Fail audit status. The operator can then review and replace it with a valid document before finalizing the package.
 
 \subsection{Security Perimeter and Multi-User Administration}
 \label{sec:ui_security_admin}

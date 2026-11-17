@@ -495,7 +495,7 @@ The ground truth held only one date per document, the preprocessing parameters w
 The authors proposed classifying the document before OCR, filtering by region, using keywords such as ``Valid Until'' to choose among dates, scoring confidence, and alerting human reviewers when no valid date is found \cite{docxb2}.
 
 This study is relevant because it combines the stages the present system uses for dates: OCR of official documents containing stamps and seals, deterministic regular expressions, and exact-match scoring, which corresponds to the exact-match and CER evaluation of dates.
-Its set of date patterns, including written months, is a tested starting point for the date rules for the credentials in The Nest and the execution pages.
+Its set of date patterns, including written months, is a tested starting point for the date rules for the credentials in the Document Repository and the execution pages.
 The patterns can be extended to the written wording typical of Philippine affidavits, such as ``this fifth day of March 2026''.
 The finding that preprocessing lowered accuracy supports the decision to pass unbinarized crops to RapidOCR, without binarization or morphological filtering, although the authors did not test RapidOCR, so the present study will verify this on its own documents.
 Its proposed remedies, namely classification before OCR, keyword disambiguation, region filtering, confidence scoring, and a human fallback, correspond to the classification module, the anchor phrases, the detector-guided regions, the warning flags, and the human-in-the-loop workspace of the present system \cite{docxb2}.
