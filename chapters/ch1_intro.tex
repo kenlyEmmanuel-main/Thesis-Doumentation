@@ -91,21 +91,15 @@ Furthermore, while conventional document assembly tools achieve visual uniformit
 \label{sec:objectives}
 The main objective of this study is to design, implement, and evaluate an offline, edge-deployable document intelligence and compliance verification framework for Philippine public procurement under Republic Act No. 9184 \cite{ref1} and Republic Act No. 12009 \cite{ref2} that automates document classification, visual defect verification, statutory sequencing, and dynamic obstacle-free stamp placement on commodity computing infrastructure. Specifically, this study aims to:
 
-\noindent\textbf{A.} Curate and annotate a domain-specific benchmark dataset of Philippine Bidding Documents (PBDs) encompassing both native digital files and scanned photocopies across core functional document layout regions to serve as the training and evaluation corpus.
+\noindent\textbf{A.} Develop an interactive local workspace interface that enables users to stage multi-file submissions, inspect detected layout regions and compliance flags, review automated stamp placements, and manually adjust document arrangements.
 
-\noindent\textbf{B.} Develop an interactive local workspace interface that enables users to stage multi-file submissions, inspect detected layout regions and compliance flags, review automated stamp placements, and manually adjust document arrangements.
+\noindent\textbf{B.} Design and optimize an edge-deployable deep vision document layout segmentation model paired with targeted text extraction to identify macroscopic document regions and dynamically calculate collision-free stamp placement coordinates within statutory margins without occluding existing document elements.
 
-\noindent\textbf{C.} Design and optimize an edge-deployable deep vision document layout segmentation model paired with targeted text extraction to identify macroscopic document regions and dynamically calculate collision-free stamp placement coordinates within statutory margins without occluding existing document elements.
+\noindent\textbf{C.} Develop an automated document classification module capable of categorizing heterogeneous public procurement instruments based on multimodal visual layout and textual content features, independent of file naming conventions.
 
-\noindent\textbf{D.} Develop an automated document classification module capable of categorizing heterogeneous public procurement instruments based on multimodal visual layout and textual content features, independent of file naming conventions.
+\noindent\textbf{D.} Implement an automated pre-flight compliance inspection pipeline that audits the assembled submission package prior to final output—evaluating checklist completeness, document sequencing, affidavit execution marks (authorized signatures and notary seals), document expiration dates, and stamp placement clearances—and flags all identified compliance defects to prevent summary procedural disqualification.
 
-\noindent\textbf{E.} Construct a deterministic statutory compliance engine that extracts mandatory tender checklist requirements and evaluates document packages against regulatory procurement rules to verify completeness and enforce prescribed document sequencing.
-
-\noindent\textbf{F.} Implement an automated pre-flight compliance inspection pipeline that audits the assembled submission package prior to final output—evaluating checklist completeness, document sequencing, affidavit execution marks (authorized signatures and notary seals), document expiration dates, and stamp placement clearances—and flags all identified compliance defects to prevent summary procedural disqualification.
-
-\noindent\textbf{G.} Implement a dual-output document packaging pipeline that generates a standardized, print-ready submission package for physical evaluation, while concurrently generating an evidentiary container of unaltered digital source files to preserve cryptographic signature integrity for electronic bidding compliance.
-
-\noindent\textbf{H.} Empirically evaluate system performance by quantifying document layout segmentation accuracy, zero-collision stamp placement rates, system usability, end-to-end turnaround time relative to manual preparation, and the mean per-page processing time (in seconds) under sequential per-page quantized YOLOv8 ONNX and RapidOCR execution on target hardware.
+\noindent\textbf{E.} Empirically evaluate system performance by quantifying document layout segmentation accuracy, zero-collision stamp placement rates, system usability, end-to-end turnaround time relative to manual preparation, and the mean per-page processing time (in seconds) under sequential per-page quantized YOLOv8 ONNX and RapidOCR execution on target hardware.
 
 \section{Scope and Delimitations}
 \label{sec:scope_and_delimitations}

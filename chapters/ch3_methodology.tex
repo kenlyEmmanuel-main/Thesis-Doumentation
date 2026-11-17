@@ -1195,7 +1195,7 @@ Three further checks are made. First, the pipeline is run on a malformed signed 
 
 Latency is profiled on the target commodity multi-core CPU without dedicated GPU acceleration. Let $T_k(i)$ denote the execution time (in seconds) of per-page stage $k$ on page $i$ across the evaluation corpus of $N$ total pages, and let $T_{\mathrm{wall}}(d)$ denote the total wall-clock time (in seconds) required to process dossier $d$ of $N_d$ pages end to end.
 
-To directly verify the latency requirement of Objective H, the combined per-page perception time under sequential quantized YOLOv8 ONNX ($k=2$) and targeted RapidOCR ($k=3$) execution on page $i$ is defined as:
+To directly verify the latency requirement of Objective E, the combined per-page perception time under sequential quantized YOLOv8 ONNX ($k=2$) and targeted RapidOCR ($k=3$) execution on page $i$ is defined as:
 \begin{equation}
 \label{eq:perception_latency}
 T_{\mathrm{perc}}(i)=T_2(i)+T_3(i)
